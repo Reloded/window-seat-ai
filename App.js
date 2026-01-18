@@ -106,10 +106,19 @@ function AppContent() {
     setNarration(`Preparing flight pack for ${flightId}...`);
 
     try {
-      // Always download fresh pack (don't use cache)
-      let pack = await narrationService.downloadFlightPack(flightId, (status) => {
-        setNarration(`${flightId}: ${status}`);
-      });
+      // Check if we have a cached pack first
+      let pack = await narrationService.loadFlightPack(flightId);
+      let fromCache = false;
+
+      if (pack) {
+        fromCache = true;
+        setNarration(`Loading cached flight pack for ${flightId}...`);
+      } else {
+        // Download new pack with progress updates
+        pack = await narrationService.downloadFlightPack(flightId, (status) => {
+          setNarration(`${flightId}: ${status}`);
+        });
+      }
 
       // Generate audio for checkpoints if ElevenLabs is configured
       if (narrationService.hasAudioSupport()) {
@@ -160,8 +169,10 @@ function AppContent() {
         ? features.join(' • ')
         : 'Demo mode (add API keys for full features)';
 
+      const cacheText = fromCache ? ' (cached)' : '';
+
       setNarration(
-        `Flight pack ready!\n\n` +
+        `Flight pack ready!${cacheText}\n\n` +
         `${routeText}\n` +
         `${durationText ? durationText + '\n' : ''}` +
         `${pack.checkpoints.length} checkpoints\n\n` +
