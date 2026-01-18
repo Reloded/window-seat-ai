@@ -19,6 +19,7 @@ Mobile app that narrates what you're flying over during flights. Pre-caches AI-g
 | GPS Tracking | expo-location |
 | Audio Playback | expo-av |
 | Map (Web) | react-leaflet / Leaflet |
+| Landmark Data | OpenStreetMap (Nominatim + Overpass) |
 
 ## Core Features
 1. **Pre-flight Download:** Enter flight number, download narration pack
@@ -90,6 +91,7 @@ The app works without any API keys using demo data. Add keys for full functional
     AudioService.js     # Audio playback management (expo-av)
     FlightDataService.js # Flight route data (AeroAPI)
     ShareService.js     # Share narrations via native share sheet or file download
+    LandmarkService.js  # Reverse geocoding & POI lookup (OpenStreetMap)
   /utils            # Helper functions
     index.js        # Utility exports
     geofence.js     # Distance calc, geofence checking
@@ -114,9 +116,10 @@ The app works without any API keys using demo data. Add keys for full functional
 - [x] Settings screen with voice, narration, GPS, storage, and API key configuration
 - [x] Flight history and favorite routes (FlightHistoryContext, FlightHistoryModal)
 - [x] Share narrations with other passengers (ShareService, native share sheet / file download)
+- [x] Landmark identification using OpenStreetMap (LandmarkService with Nominatim + Overpass API)
 
 ## Future Enhancements
-- [ ] Integration with Apple/Google Maps for landmark identification
+(No pending enhancements - MVP complete)
 
 ## Commands
 ```bash

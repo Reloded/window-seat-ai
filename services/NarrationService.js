@@ -3,6 +3,7 @@ import { claudeService } from './ClaudeService';
 import { elevenLabsService } from './ElevenLabsService';
 import { audioService } from './AudioService';
 import { flightDataService } from './FlightDataService';
+import { landmarkService } from './LandmarkService';
 import { isApiKeyConfigured } from '../config/api';
 import { routeToCheckpoints, estimateFlightDuration, formatDuration } from '../utils/routeUtils';
 
@@ -79,11 +80,23 @@ class NarrationService {
 
     // Convert route to checkpoints
     if (onProgress) onProgress('Creating checkpoints...');
-    const checkpoints = routeToCheckpoints(flightData.route, {
+    let checkpoints = routeToCheckpoints(flightData.route, {
       numCheckpoints: 20,
       minSpacing: 80000, // 80km minimum between checkpoints
       geofenceRadius: 15000, // 15km trigger radius
     });
+
+    // Enrich checkpoints with landmark data
+    if (onProgress) onProgress('Identifying landmarks...');
+    try {
+      checkpoints = await landmarkService.enrichCheckpoints(checkpoints, {
+        onProgress: (done, total) => {
+          if (onProgress) onProgress(`Identifying landmarks (${done}/${total})...`);
+        },
+      });
+    } catch (error) {
+      console.warn('Landmark enrichment failed, using default names:', error);
+    }
 
     // Generate narrations for each checkpoint
     if (claudeService.isConfigured()) {
@@ -105,6 +118,7 @@ class NarrationService {
               checkpoint: {
                 name: checkpoint.name,
                 type: checkpoint.type,
+                landmark: checkpoint.landmark,
               },
               origin: pack.origin?.name,
               destination: pack.destination?.name,

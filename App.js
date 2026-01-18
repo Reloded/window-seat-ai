@@ -106,15 +106,10 @@ function AppContent() {
     setNarration(`Preparing flight pack for ${flightId}...`);
 
     try {
-      // Check if we have a cached pack first
-      let pack = await narrationService.loadFlightPack(flightId);
-
-      if (!pack) {
-        // Download new pack with progress updates
-        pack = await narrationService.downloadFlightPack(flightId, (status) => {
-          setNarration(`${flightId}: ${status}`);
-        });
-      }
+      // Always download fresh pack (don't use cache)
+      let pack = await narrationService.downloadFlightPack(flightId, (status) => {
+        setNarration(`${flightId}: ${status}`);
+      });
 
       // Generate audio for checkpoints if ElevenLabs is configured
       if (narrationService.hasAudioSupport()) {

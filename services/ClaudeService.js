@@ -89,12 +89,15 @@ class ClaudeService {
     };
     const lengthInstruction = lengthInstructions[this.narrationPreferences.length] || lengthInstructions.medium;
 
+    // Build landmark context if available
+    const landmarkContext = this.buildLandmarkContext(context);
+
     return `You are a knowledgeable flight narrator for the "Window Seat" app. Generate an engaging, informative narration about what a passenger would see looking out their airplane window at these coordinates.
 
 Location: ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°
 ${altitudeContext}
 ${context.flightInfo ? `Flight: ${context.flightInfo}` : ''}
-${context.checkpoint ? `Landmark: ${context.checkpoint.name}` : ''}
+${landmarkContext}
 
 Guidelines:
 - ${lengthInstruction}
@@ -105,6 +108,47 @@ Guidelines:
 - If over ocean, describe maritime features, shipping routes, or underwater geography
 
 Respond with ONLY the narration text, no additional commentary.`;
+  }
+
+  /**
+   * Build landmark context string for the prompt
+   */
+  buildLandmarkContext(context) {
+    const checkpoint = context.checkpoint;
+    if (!checkpoint) return '';
+
+    // If checkpoint has rich landmark data, use it
+    if (checkpoint.landmark) {
+      const landmark = checkpoint.landmark;
+      const parts = [`Location: ${checkpoint.name}`];
+
+      if (landmark.type) {
+        parts.push(`Type: ${landmark.type.replace(/_/g, ' ')}`);
+      }
+
+      if (landmark.region || landmark.country) {
+        const regionParts = [landmark.region, landmark.country].filter(Boolean);
+        parts.push(`Region: ${regionParts.join(', ')}`);
+      }
+
+      if (landmark.nearbyFeatures?.length > 0) {
+        const namedFeatures = landmark.nearbyFeatures
+          .filter(f => f.name && f.name !== 'Unknown')
+          .map(f => f.name);
+        if (namedFeatures.length > 0) {
+          parts.push(`Nearby: ${namedFeatures.join(', ')}`);
+        }
+      }
+
+      return parts.join('\n');
+    }
+
+    // Fall back to simple landmark name if no rich data
+    if (checkpoint.name) {
+      return `Landmark: ${checkpoint.name}`;
+    }
+
+    return '';
   }
 
   async generateCheckpointNarrations(checkpoints, flightInfo = '') {

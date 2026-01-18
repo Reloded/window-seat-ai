@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
-import { MapContainer, TileLayer, Polyline, Circle, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Circle, Marker, Popup, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { COLORS, SIZES, MAP_TILES, containerStyles } from './mapStyles';
 import { getCheckpointIcon, getUserLocationIcon, markerStyles } from './CheckpointMarker';
@@ -133,7 +133,40 @@ export function FlightMap({
               <Marker
                 position={position}
                 icon={getCheckpointIcon(checkpoint, isTriggered)}
-              />
+              >
+                <Tooltip direction="top" offset={[0, -10]} opacity={0.95}>
+                  <div style={{ fontFamily: 'system-ui', fontSize: '13px' }}>
+                    <strong>{checkpoint.name}</strong>
+                    {checkpoint.landmark?.type && (
+                      <div style={{ color: '#666', fontSize: '11px' }}>
+                        {checkpoint.landmark.type.replace(/_/g, ' ')}
+                      </div>
+                    )}
+                    {checkpoint.landmark?.region && (
+                      <div style={{ color: '#888', fontSize: '11px' }}>
+                        {checkpoint.landmark.region}
+                        {checkpoint.landmark.country && `, ${checkpoint.landmark.country}`}
+                      </div>
+                    )}
+                  </div>
+                </Tooltip>
+                {checkpoint.narration && (
+                  <Popup>
+                    <div style={{ maxWidth: '250px', fontFamily: 'system-ui' }}>
+                      <strong style={{ fontSize: '14px' }}>{checkpoint.name}</strong>
+                      {checkpoint.landmark?.type && (
+                        <div style={{ color: '#666', fontSize: '12px', marginBottom: '8px' }}>
+                          {checkpoint.landmark.type.replace(/_/g, ' ')}
+                          {checkpoint.landmark?.region && ` • ${checkpoint.landmark.region}`}
+                        </div>
+                      )}
+                      <p style={{ fontSize: '13px', lineHeight: '1.4', margin: 0 }}>
+                        {checkpoint.narration}
+                      </p>
+                    </div>
+                  </Popup>
+                )}
+              </Marker>
             </React.Fragment>
           );
         })}

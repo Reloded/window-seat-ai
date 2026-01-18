@@ -18,6 +18,13 @@ export const API_CONFIG = {
     apiKey: process.env.EXPO_PUBLIC_FLIGHT_API_KEY || 'YOUR_FLIGHT_API_KEY',
     provider: 'aeroapi', // Currently only aeroapi is supported
   },
+  landmark: {
+    // OpenStreetMap Nominatim and Overpass API settings
+    // No API key required, but must comply with usage policy
+    nominatimUserAgent: 'WindowSeatAI/1.0',
+    requestDelayMs: 1100,  // Nominatim rate limit: max 1 req/sec
+    searchRadius: 50000,   // 50km POI search radius
+  },
 };
 
 export function isApiKeyConfigured(service) {

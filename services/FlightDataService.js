@@ -236,6 +236,24 @@ class FlightDataService {
       return mockRoutes[normalized];
     }
 
+    // Check if it's an airport pair format (e.g., LAX-SFO, JFK-LAX)
+    const airportPairMatch = normalized.match(/^([A-Z]{3})-([A-Z]{3})$/);
+    if (airportPairMatch) {
+      const originCode = airportPairMatch[1];
+      const destCode = airportPairMatch[2];
+      const originAirport = this.getMockAirport(originCode);
+      const destAirport = this.getMockAirport(destCode);
+
+      if (originAirport.latitude && destAirport.latitude) {
+        return this.generateGreatCircleRoute(
+          { lat: originAirport.latitude, lng: originAirport.longitude, name: originAirport.name },
+          { lat: destAirport.latitude, lng: destAirport.longitude, name: destAirport.name },
+          'XX',
+          'Demo Route'
+        );
+      }
+    }
+
     // Generate a default transatlantic route
     return this.generateGreatCircleRoute(
       { lat: 51.4700, lng: -0.4543, name: 'London Heathrow' },
