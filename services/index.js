@@ -7,3 +7,4 @@ export { flightDataService, FlightDataService } from './FlightDataService';
 export { shareService, ShareService } from './ShareService';
 export { landmarkService, LandmarkService } from './LandmarkService';
 export { sunPositionService, SunPositionService } from './SunPositionService';
+export { borderCrossingService, BorderCrossingService } from './BorderCrossingService';

@@ -49,6 +49,7 @@ The app works without any API keys using demo data. Add keys for full functional
     CheckpointList.js # Scrollable list of all checkpoints
     WindowSideAdvisor.js # Recommends left/right window seat based on landmarks
     SunTrackerDisplay.js # Shows sun position, golden hour, sunrise/sunset times
+    BorderCrossingAlert.js # Shows alerts when crossing country/state borders
     /map              # Map view components
       index.js        # Map component exports
       FlightMap.js    # Interactive map with route and checkpoints
@@ -98,6 +99,7 @@ The app works without any API keys using demo data. Add keys for full functional
     ShareService.js     # Share narrations via native share sheet or file download
     LandmarkService.js  # Reverse geocoding & POI lookup (OpenStreetMap)
     SunPositionService.js # Sunrise/sunset calculations and sun position
+    BorderCrossingService.js # Detects country/state border crossings
   /utils            # Helper functions
     index.js        # Utility exports
     geofence.js     # Distance calc, geofence checking
@@ -125,6 +127,7 @@ The app works without any API keys using demo data. Add keys for full functional
 - [x] Landmark identification using OpenStreetMap (LandmarkService with Nominatim + Overpass API)
 - [x] Window side advisor recommending left/right seat based on landmarks along route
 - [x] Sunrise/sunset tracker with golden hour alerts and viewing side recommendations
+- [x] Country/state border crossing alerts with flag display
 
 ## Future Enhancements
 (No pending enhancements - MVP complete)
