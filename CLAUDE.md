@@ -50,10 +50,12 @@ The app works without any API keys using demo data. Add keys for full functional
     WindowSideAdvisor.js # Recommends left/right window seat based on landmarks
     SunTrackerDisplay.js # Shows sun position, golden hour, sunrise/sunset times
     BorderCrossingAlert.js # Shows alerts when crossing country/state borders
-    /map              # Map view components
+    /map              # Map view components (platform-specific)
       index.js        # Map component exports
-      FlightMap.js    # Interactive map with route and checkpoints
-      CheckpointMarker.js # Custom SVG markers
+      FlightMap.js    # Native placeholder (map not available on mobile)
+      FlightMap.web.js    # Web map with react-leaflet
+      CheckpointMarker.js # Native stub for markers
+      CheckpointMarker.web.js # Web SVG markers using Leaflet
       mapStyles.js    # Map styling constants
     /settings         # Settings screen components
       index.js        # Settings exports
@@ -128,9 +130,11 @@ The app works without any API keys using demo data. Add keys for full functional
 - [x] Window side advisor recommending left/right seat based on landmarks along route
 - [x] Sunrise/sunset tracker with golden hour alerts and viewing side recommendations
 - [x] Country/state border crossing alerts with flag display
+- [x] Mobile UI improvements (scrollable content, inline expandable sections)
+- [x] Platform-specific map components (web uses react-leaflet, native shows placeholder)
 
 ## Future Enhancements
-(No pending enhancements - MVP complete)
+- [ ] Native map support using react-native-maps for iOS/Android
 
 ## Commands
 ```bash
@@ -139,6 +143,14 @@ npm run android    # Run on Android
 npm run ios        # Run on iOS (Mac only)
 npm run web        # Run in browser
 ```
+
+## Testing on Mobile
+1. Install **Expo Go** on your phone ([iOS](https://apps.apple.com/app/expo-go/id982107779) / [Android](https://play.google.com/store/apps/details?id=host.exp.exponent))
+2. Run `npm start` or `npx expo start`
+3. Scan the QR code with your phone camera (iOS) or Expo Go app (Android)
+4. For remote testing, use `npx expo start --tunnel`
+
+**Note:** Map view is only available on web. On mobile, GPS tracking and all other features work normally.
 
 ## API Key Configuration
 Set environment variables or edit `config/api.js`:
@@ -152,3 +164,14 @@ EXPO_PUBLIC_FLIGHT_API_KEY=your_flight_api_key
 ```
 
 The app works without API keys using demo/mock data for testing.
+
+## Demo Flight Numbers
+These flights work without API keys (mock routes):
+- **BA115, BA117** - London (LHR) → New York (JFK)
+- **BA178** - New York (JFK) → London (LHR)
+- **BA284** - San Francisco (SFO) → London (LHR)
+- **EK002** - London (LHR) → Dubai (DXB)
+- **JL001** - San Francisco (SFO) → Tokyo (HND)
+- **QF12** - Los Angeles (LAX) → Sydney (SYD)
+
+You can also enter airport pairs like `LAX-SFO` or `JFK-LAX` for custom demo routes.
