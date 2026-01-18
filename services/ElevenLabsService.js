@@ -1,0 +1,174 @@
+import * as FileSystem from 'expo-file-system';
+import { API_CONFIG, isApiKeyConfigured } from '../config/api';
+
+const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
+const AUDIO_CACHE_DIR = `${FileSystem.documentDirectory}audio/`;
+
+class ElevenLabsService {
+  constructor() {
+    this.config = API_CONFIG.elevenLabs;
+    this.ensureCacheDir();
+  }
+
+  async ensureCacheDir() {
+    const dirInfo = await FileSystem.getInfoAsync(AUDIO_CACHE_DIR);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(AUDIO_CACHE_DIR, { intermediates: true });
+    }
+  }
+
+  isConfigured() {
+    return isApiKeyConfigured('elevenLabs');
+  }
+
+  async getVoices() {
+    if (!this.isConfigured()) {
+      throw new Error('ElevenLabs API key not configured');
+    }
+
+    const response = await fetch(`${ELEVENLABS_API_URL}/voices`, {
+      headers: {
+        'xi-api-key': this.config.apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch voices');
+    }
+
+    const data = await response.json();
+    return data.voices;
+  }
+
+  async generateSpeech(text, options = {}) {
+    if (!this.isConfigured()) {
+      throw new Error('ElevenLabs API key not configured');
+    }
+
+    const voiceId = options.voiceId || this.config.voiceId;
+
+    const response = await fetch(
+      `${ELEVENLABS_API_URL}/text-to-speech/${voiceId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'xi-api-key': this.config.apiKey,
+        },
+        body: JSON.stringify({
+          text,
+          model_id: options.modelId || 'eleven_monolingual_v1',
+          voice_settings: {
+            stability: options.stability || 0.5,
+            similarity_boost: options.similarityBoost || 0.75,
+            style: options.style || 0.0,
+            use_speaker_boost: options.useSpeakerBoost ?? true,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail?.message || 'Failed to generate speech');
+    }
+
+    // Return the audio blob
+    return await response.blob();
+  }
+
+  async generateAndSaveAudio(text, filename, options = {}) {
+    await this.ensureCacheDir();
+
+    const audioBlob = await this.generateSpeech(text, options);
+    const filePath = `${AUDIO_CACHE_DIR}${filename}.mp3`;
+
+    // Convert blob to base64 and save
+    const reader = new FileReader();
+    const base64Promise = new Promise((resolve, reject) => {
+      reader.onloadend = () => {
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+    });
+    reader.readAsDataURL(audioBlob);
+
+    const base64Data = await base64Promise;
+    await FileSystem.writeAsStringAsync(filePath, base64Data, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    return filePath;
+  }
+
+  async generateFlightPackAudio(checkpoints, onProgress) {
+    const audioFiles = [];
+    let completed = 0;
+
+    for (const checkpoint of checkpoints) {
+      if (!checkpoint.narration) continue;
+
+      try {
+        const filename = `checkpoint_${checkpoint.id}`;
+        const filePath = await this.generateAndSaveAudio(
+          checkpoint.narration,
+          filename
+        );
+
+        audioFiles.push({
+          checkpointId: checkpoint.id,
+          filePath,
+        });
+
+        completed++;
+        if (onProgress) {
+          onProgress(completed, checkpoints.length);
+        }
+      } catch (error) {
+        console.error(`Failed to generate audio for ${checkpoint.id}:`, error);
+        audioFiles.push({
+          checkpointId: checkpoint.id,
+          filePath: null,
+          error: error.message,
+        });
+      }
+    }
+
+    return audioFiles;
+  }
+
+  async getAudioFilePath(checkpointId) {
+    const filePath = `${AUDIO_CACHE_DIR}checkpoint_${checkpointId}.mp3`;
+    const fileInfo = await FileSystem.getInfoAsync(filePath);
+    return fileInfo.exists ? filePath : null;
+  }
+
+  async clearAudioCache() {
+    const dirInfo = await FileSystem.getInfoAsync(AUDIO_CACHE_DIR);
+    if (dirInfo.exists) {
+      await FileSystem.deleteAsync(AUDIO_CACHE_DIR, { idempotent: true });
+      await this.ensureCacheDir();
+    }
+  }
+
+  async getCacheSize() {
+    const dirInfo = await FileSystem.getInfoAsync(AUDIO_CACHE_DIR);
+    if (!dirInfo.exists) return 0;
+
+    const files = await FileSystem.readDirectoryAsync(AUDIO_CACHE_DIR);
+    let totalSize = 0;
+
+    for (const file of files) {
+      const fileInfo = await FileSystem.getInfoAsync(`${AUDIO_CACHE_DIR}${file}`);
+      if (fileInfo.size) {
+        totalSize += fileInfo.size;
+      }
+    }
+
+    return totalSize;
+  }
+}
+
+export const elevenLabsService = new ElevenLabsService();
+export { ElevenLabsService };

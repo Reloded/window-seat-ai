@@ -4,7 +4,7 @@
 Mobile app that narrates what you're flying over during flights. Pre-caches AI-generated descriptions so it works 100% offline at 35,000 feet.
 
 ## Current Status
-- **Phase:** Initial Setup
+- **Phase:** Feature Complete (MVP)
 - **Platform:** Expo (React Native)
 - **Target:** iOS + Android
 
@@ -12,8 +12,8 @@ Mobile app that narrates what you're flying over during flights. Pre-caches AI-g
 | Component | Technology |
 |-----------|------------|
 | Frontend | Expo / React Native |
-| Flight Data | FlightRadar24 API (or AeroAPI) |
-| AI Narration | Claude API |
+| Flight Data | AeroAPI (FlightAware) |
+| AI Narration | Claude API (Anthropic) |
 | Voice Synthesis | ElevenLabs API |
 | Offline Storage | expo-file-system |
 | GPS Tracking | expo-location |
@@ -25,31 +25,63 @@ Mobile app that narrates what you're flying over during flights. Pre-caches AI-g
 3. **Geofenced Triggers:** Audio plays automatically when crossing landmarks
 4. **Rich Content:** Geological, historical, and modern facts about terrain
 
-## API Keys Needed
-- [ ] Claude API key (Anthropic)
-- [ ] ElevenLabs API key (voice synthesis)
-- [ ] FlightRadar24 or AeroAPI key (flight paths)
+## API Keys (Optional)
+The app works without any API keys using demo data. Add keys for full functionality:
+
+| API | Purpose | Get Key |
+|-----|---------|---------|
+| Claude (Anthropic) | AI-generated narrations | [console.anthropic.com](https://console.anthropic.com) |
+| ElevenLabs | Voice synthesis | [elevenlabs.io](https://elevenlabs.io) |
+| AeroAPI (FlightAware) | Real flight routes | [flightaware.com/aeroapi](https://flightaware.com/commercial/aeroapi/) |
 
 ## Project Structure
 ```
 /window-seat-ai
-  /app              # Main app screens
   /components       # Reusable UI components
-  /services         # API integrations (Claude, ElevenLabs, Flight data)
-  /utils            # Helper functions (distance calc, etc.)
+    index.js        # Component exports
+    TelemetryDisplay.js  # GPS telemetry bar
+    StatusIndicator.js   # Tracking status indicator
+    AudioPlayerControls.js # Audio playback controls
+  /config           # Configuration
+    index.js        # Config exports
+    api.js          # API keys and settings
+  /hooks            # Custom React hooks
+    index.js        # Hook exports
+    useLocationTracking.js  # GPS tracking hook with geofencing
+  /services         # API integrations
+    index.js        # Service exports
+    LocationService.js  # GPS tracking service (singleton)
+    ClaudeService.js    # Claude API for narration generation
+    NarrationService.js # Manages narration caching & playback
+    ElevenLabsService.js # Text-to-speech API integration
+    AudioService.js     # Audio playback management (expo-av)
+    FlightDataService.js # Flight route data (AeroAPI)
+  /utils            # Helper functions
+    index.js        # Utility exports
+    geofence.js     # Distance calc, geofence checking
+    conversions.js  # Unit conversions (m->ft, mps->kts, etc.)
+    routeUtils.js   # Route-to-checkpoint conversion, ETA calc
   /assets           # Static assets
+  App.js            # Main application
   CLAUDE.md         # This file
 ```
 
-## Next Steps
+## Completed Features
 - [x] Initialize Expo project
 - [x] Install dependencies (expo-location, expo-av, expo-file-system)
-- [ ] Build GPS tracking component
-- [ ] Create mock narration UI
-- [ ] Add Claude API integration
-- [ ] Add flight path pre-caching
-- [ ] Add ElevenLabs audio generation
-- [ ] Build offline playback system
+- [x] Build GPS tracking component (LocationService, useLocationTracking hook, geofence utils)
+- [x] Create mock narration UI (TelemetryDisplay, StatusIndicator components)
+- [x] Add Claude API integration (ClaudeService, NarrationService with offline caching)
+- [x] Add ElevenLabs audio generation (ElevenLabsService, AudioService, AudioPlayerControls)
+- [x] Build offline playback system (audio cached to expo-file-system)
+- [x] Add flight path pre-caching (FlightDataService with AeroAPI + great circle fallback)
+
+## Future Enhancements
+- [ ] Map view showing current position and upcoming checkpoints
+- [ ] Settings screen for voice selection and playback preferences
+- [ ] Flight history and favorite routes
+- [ ] Share narrations with other passengers
+- [ ] Integration with Apple/Google Maps for landmark identification
 
 ## Commands
 ```bash
@@ -58,3 +90,16 @@ npm run android    # Run on Android
 npm run ios        # Run on iOS (Mac only)
 npm run web        # Run in browser
 ```
+
+## API Key Configuration
+Set environment variables or edit `config/api.js`:
+```bash
+# Option 1: Environment variables (recommended)
+EXPO_PUBLIC_CLAUDE_API_KEY=your_claude_key
+EXPO_PUBLIC_ELEVENLABS_API_KEY=your_elevenlabs_key
+EXPO_PUBLIC_FLIGHT_API_KEY=your_flight_api_key
+
+# Option 2: Edit config/api.js directly (not for production)
+```
+
+The app works without API keys using demo/mock data for testing.
