@@ -18,6 +18,7 @@ Mobile app that narrates what you're flying over during flights. Pre-caches AI-g
 | Offline Storage | expo-file-system |
 | GPS Tracking | expo-location |
 | Audio Playback | expo-av |
+| Map (Web) | react-leaflet / Leaflet |
 
 ## Core Features
 1. **Pre-flight Download:** Enter flight number, download narration pack
@@ -42,6 +43,11 @@ The app works without any API keys using demo data. Add keys for full functional
     TelemetryDisplay.js  # GPS telemetry bar
     StatusIndicator.js   # Tracking status indicator
     AudioPlayerControls.js # Audio playback controls
+    /map              # Map view components
+      index.js        # Map component exports
+      FlightMap.js    # Interactive map with route and checkpoints
+      CheckpointMarker.js # Custom SVG markers
+      mapStyles.js    # Map styling constants
   /config           # Configuration
     index.js        # Config exports
     api.js          # API keys and settings
@@ -75,9 +81,9 @@ The app works without any API keys using demo data. Add keys for full functional
 - [x] Add ElevenLabs audio generation (ElevenLabsService, AudioService, AudioPlayerControls)
 - [x] Build offline playback system (audio cached to expo-file-system)
 - [x] Add flight path pre-caching (FlightDataService with AeroAPI + great circle fallback)
+- [x] Map view showing current position and upcoming checkpoints (react-leaflet for web)
 
 ## Future Enhancements
-- [ ] Map view showing current position and upcoming checkpoints
 - [ ] Settings screen for voice selection and playback preferences
 - [ ] Flight history and favorite routes
 - [ ] Share narrations with other passengers
