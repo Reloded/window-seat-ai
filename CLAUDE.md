@@ -64,12 +64,19 @@ The app works without any API keys using demo data. Add keys for full functional
         GPSSection.js
         StorageSection.js
         APISection.js
+    /history          # Flight history components
+      index.js        # History component exports
+      FlightHistoryModal.js   # Full-screen history modal
+      FlightHistoryTabs.js    # All/Favorites tab switcher
+      FlightHistoryList.js    # FlatList with empty state
+      FlightHistoryItem.js    # Flight card with actions
   /config           # Configuration
     index.js        # Config exports
     api.js          # API keys and settings
   /contexts         # React contexts
     index.js        # Context exports
-    SettingsContext.js  # Global settings state with AsyncStorage persistence
+    SettingsContext.js      # Global settings state with AsyncStorage persistence
+    FlightHistoryContext.js # Flight history with favorites, AsyncStorage persistence
   /hooks            # Custom React hooks
     index.js        # Hook exports
     useLocationTracking.js  # GPS tracking hook with geofencing
@@ -104,9 +111,9 @@ The app works without any API keys using demo data. Add keys for full functional
 - [x] Add flight path pre-caching (FlightDataService with AeroAPI + great circle fallback)
 - [x] Map view showing current position and upcoming checkpoints (react-leaflet for web)
 - [x] Settings screen with voice, narration, GPS, storage, and API key configuration
+- [x] Flight history and favorite routes (FlightHistoryContext, FlightHistoryModal)
 
 ## Future Enhancements
-- [ ] Flight history and favorite routes
 - [ ] Share narrations with other passengers
 - [ ] Integration with Apple/Google Maps for landmark identification
 

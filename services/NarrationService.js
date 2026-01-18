@@ -229,6 +229,31 @@ class NarrationService {
     }
   }
 
+  async getCacheSize() {
+    // On web, we can't measure file system cache
+    if (Platform.OS === 'web' || !FileSystem) return 0;
+
+    try {
+      const dirInfo = await FileSystem.getInfoAsync(NARRATION_CACHE_DIR);
+      if (!dirInfo.exists) return 0;
+
+      const files = await FileSystem.readDirectoryAsync(NARRATION_CACHE_DIR);
+      let totalSize = 0;
+
+      for (const file of files) {
+        const fileInfo = await FileSystem.getInfoAsync(`${NARRATION_CACHE_DIR}${file}`);
+        if (fileInfo.exists && fileInfo.size) {
+          totalSize += fileInfo.size;
+        }
+      }
+
+      return totalSize;
+    } catch (error) {
+      console.error('Failed to get narration cache size:', error);
+      return 0;
+    }
+  }
+
   setCurrentFlightPack(pack) {
     this.currentFlightPack = pack;
   }

@@ -10,11 +10,11 @@ import {
   StatusBar,
   ActivityIndicator
 } from 'react-native';
-import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, FlightMap, SettingsModal } from './components';
+import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, FlightMap, SettingsModal, FlightHistoryModal } from './components';
 import { useLocationTracking, useSettingsSync } from './hooks';
 import { narrationService } from './services';
 import { isApiKeyConfigured } from './config';
-import { SettingsProvider, useSettings } from './contexts';
+import { SettingsProvider, useSettings, FlightHistoryProvider, useFlightHistory } from './contexts';
 
 function AppContent() {
   const [narration, setNarration] = useState(
@@ -29,9 +29,13 @@ function AppContent() {
   const [mapExpanded, setMapExpanded] = useState(false);
   const [flightRoute, setFlightRoute] = useState([]);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
 
   // Sync settings to services
   useSettingsSync();
+
+  // Flight history
+  const { addFlightToHistory } = useFlightHistory();
 
   // Get geofence radius from settings
   const { settings } = useSettings();
@@ -133,6 +137,17 @@ function AppContent() {
 
       // Build flight info summary
       const flightInfo = narrationService.getCurrentFlightInfo();
+
+      // Add to flight history
+      const hasAudio = pack.checkpoints.some(c => c.audioPath);
+      addFlightToHistory({
+        flightNumber: flightId,
+        airline: flightInfo?.airline || null,
+        origin: flightInfo?.origin || null,
+        destination: flightInfo?.destination || null,
+        checkpointCount: pack.checkpoints.length,
+        hasAudio,
+      });
       const routeText = flightInfo?.origin?.name && flightInfo?.destination?.name
         ? `${flightInfo.origin.name} → ${flightInfo.destination.name}`
         : 'Route loaded';
@@ -141,7 +156,6 @@ function AppContent() {
         ? `Est. duration: ${flightInfo.estimatedDuration}`
         : '';
 
-      const hasAudio = pack.checkpoints.some(c => c.audioPath);
       const features = [];
       if (isApiKeyConfigured('claude')) features.push('AI narrations');
       if (hasAudio) features.push('Voice audio');
@@ -187,15 +201,21 @@ function AppContent() {
 
       {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => setHistoryVisible(true)}
+        >
+          <Text style={styles.headerButtonIcon}>☰</Text>
+        </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.title}>WINDOW SEAT</Text>
           <Text style={styles.subtitle}>AI Flight Narrator</Text>
         </View>
         <TouchableOpacity
-          style={styles.settingsButton}
+          style={styles.headerButton}
           onPress={() => setSettingsVisible(true)}
         >
-          <Text style={styles.settingsIcon}>⚙</Text>
+          <Text style={styles.headerButtonIcon}>⚙</Text>
         </TouchableOpacity>
       </View>
 
@@ -283,6 +303,20 @@ function AppContent() {
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}
       />
+
+      {/* Flight History Modal */}
+      <FlightHistoryModal
+        visible={historyVisible}
+        onClose={() => setHistoryVisible(false)}
+        onSelectFlight={(flight) => {
+          setFlightNumber(flight.flightNumber);
+          setHistoryVisible(false);
+          // Trigger download after modal closes
+          setTimeout(() => {
+            downloadFlightPack();
+          }, 100);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -290,7 +324,9 @@ function AppContent() {
 export default function App() {
   return (
     <SettingsProvider>
-      <AppContent />
+      <FlightHistoryProvider>
+        <AppContent />
+      </FlightHistoryProvider>
     </SettingsProvider>
   );
 }
@@ -312,12 +348,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  settingsButton: {
-    position: 'absolute',
-    right: 0,
+  headerButton: {
     padding: 8,
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  settingsIcon: {
+  headerButtonIcon: {
     fontSize: 24,
     color: 'rgba(255, 255, 255, 0.7)',
   },
