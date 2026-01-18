@@ -47,6 +47,7 @@ The app works without any API keys using demo data. Add keys for full functional
     NextCheckpointDisplay.js # Distance/ETA to next checkpoint
     FlightProgressBar.js # Visual flight progress with % complete
     CheckpointList.js # Scrollable list of all checkpoints
+    WindowSideAdvisor.js # Recommends left/right window seat based on landmarks
     /map              # Map view components
       index.js        # Map component exports
       FlightMap.js    # Interactive map with route and checkpoints
@@ -120,6 +121,7 @@ The app works without any API keys using demo data. Add keys for full functional
 - [x] Flight history and favorite routes (FlightHistoryContext, FlightHistoryModal)
 - [x] Share narrations with other passengers (ShareService, native share sheet / file download)
 - [x] Landmark identification using OpenStreetMap (LandmarkService with Nominatim + Overpass API)
+- [x] Window side advisor recommending left/right seat based on landmarks along route
 
 ## Future Enhancements
 (No pending enhancements - MVP complete)

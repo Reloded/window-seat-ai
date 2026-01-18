@@ -4,6 +4,7 @@ export { AudioPlayerControls } from './AudioPlayerControls';
 export { NextCheckpointDisplay } from './NextCheckpointDisplay';
 export { FlightProgressBar } from './FlightProgressBar';
 export { CheckpointList } from './CheckpointList';
+export { WindowSideAdvisor } from './WindowSideAdvisor';
 export { FlightMap } from './map';
 export { SettingsModal } from './settings';
 export { FlightHistoryModal } from './history';
