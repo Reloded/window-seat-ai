@@ -157,8 +157,17 @@ class NarrationService {
   }
 
   async saveFlightPack(pack) {
-    // On web, only use memory storage
-    if (Platform.OS === 'web' || !FileSystem) return;
+    // On web, use localStorage
+    if (Platform.OS === 'web') {
+      try {
+        localStorage.setItem(`flightPack_${pack.id}`, JSON.stringify(pack));
+      } catch (e) {
+        console.warn('Failed to save to localStorage:', e);
+      }
+      return;
+    }
+
+    if (!FileSystem) return;
     const filePath = `${NARRATION_CACHE_DIR}${pack.id}.json`;
     await FileSystem.writeAsStringAsync(filePath, JSON.stringify(pack));
   }
@@ -166,13 +175,27 @@ class NarrationService {
   async loadFlightPack(flightNumber) {
     const packId = flightNumber.toUpperCase().replace(/\s/g, '');
 
-    // Check memory cache
+    // Check memory cache first
     if (this.flightPacks.has(packId)) {
       return this.flightPacks.get(packId);
     }
 
-    // On web, only use memory cache
-    if (Platform.OS === 'web' || !FileSystem) return null;
+    // On web, check localStorage
+    if (Platform.OS === 'web') {
+      try {
+        const stored = localStorage.getItem(`flightPack_${packId}`);
+        if (stored) {
+          const pack = JSON.parse(stored);
+          this.flightPacks.set(packId, pack);
+          return pack;
+        }
+      } catch (e) {
+        console.warn('Failed to load from localStorage:', e);
+      }
+      return null;
+    }
+
+    if (!FileSystem) return null;
 
     // Check file cache
     const filePath = `${NARRATION_CACHE_DIR}${packId}.json`;
@@ -222,9 +245,17 @@ class NarrationService {
     const packId = flightNumber.toUpperCase().replace(/\s/g, '');
     this.flightPacks.delete(packId);
 
-    // On web, only clear memory
-    if (Platform.OS === 'web' || !FileSystem) return;
+    // On web, clear localStorage
+    if (Platform.OS === 'web') {
+      try {
+        localStorage.removeItem(`flightPack_${packId}`);
+      } catch (e) {
+        console.warn('Failed to remove from localStorage:', e);
+      }
+      return;
+    }
 
+    if (!FileSystem) return;
     const filePath = `${NARRATION_CACHE_DIR}${packId}.json`;
     await FileSystem.deleteAsync(filePath, { idempotent: true });
   }
@@ -233,9 +264,18 @@ class NarrationService {
     this.flightPacks.clear();
     this.currentFlightPack = null;
 
-    // On web, only clear memory
-    if (Platform.OS === 'web' || !FileSystem) return;
+    // On web, clear localStorage
+    if (Platform.OS === 'web') {
+      try {
+        const keys = Object.keys(localStorage).filter(k => k.startsWith('flightPack_'));
+        keys.forEach(k => localStorage.removeItem(k));
+      } catch (e) {
+        console.warn('Failed to clear localStorage:', e);
+      }
+      return;
+    }
 
+    if (!FileSystem) return;
     const dirInfo = await FileSystem.getInfoAsync(NARRATION_CACHE_DIR);
     if (dirInfo.exists) {
       await FileSystem.deleteAsync(NARRATION_CACHE_DIR, { idempotent: true });
@@ -244,8 +284,22 @@ class NarrationService {
   }
 
   async getCacheSize() {
-    // On web, we can't measure file system cache
-    if (Platform.OS === 'web' || !FileSystem) return 0;
+    // On web, estimate localStorage size
+    if (Platform.OS === 'web') {
+      try {
+        let size = 0;
+        Object.keys(localStorage)
+          .filter(k => k.startsWith('flightPack_'))
+          .forEach(k => {
+            size += localStorage.getItem(k)?.length || 0;
+          });
+        return size * 2; // UTF-16 = 2 bytes per char
+      } catch (e) {
+        return 0;
+      }
+    }
+
+    if (!FileSystem) return 0;
 
     try {
       const dirInfo = await FileSystem.getInfoAsync(NARRATION_CACHE_DIR);
