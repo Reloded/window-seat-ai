@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,106 +7,166 @@ import {
   ScrollView,
   TextInput,
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  ActivityIndicator
 } from 'react-native';
-import * as Location from 'expo-location';
+import { TelemetryDisplay, StatusIndicator, AudioPlayerControls } from './components';
+import { useLocationTracking } from './hooks';
+import { narrationService } from './services';
+import { isApiKeyConfigured } from './config';
 
 export default function App() {
-  const [location, setLocation] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [narration, setNarration] = useState("Enter your flight number and press 'Download Flight Pack' before takeoff, or press 'Scan Horizon' to identify your current location.");
-  const [isTracking, setIsTracking] = useState(false);
+  const [narration, setNarration] = useState(
+    "Enter your flight number and press 'Download Flight Pack' before takeoff, or press 'Scan Horizon' to identify your current location."
+  );
   const [flightNumber, setFlightNumber] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [flightPackReady, setFlightPackReady] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(null);
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [checkpoints, setCheckpoints] = useState([]);
 
-  useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Location permission denied. Enable it in settings to use this app.');
-        return;
-      }
-    })();
-  }, []);
+  // Handle checkpoint triggers from geofenced locations
+  const handleCheckpointEntered = useCallback(async (checkpoint) => {
+    setNarration(checkpoint.narration || `Approaching: ${checkpoint.name}`);
+
+    // Play audio if available and enabled
+    if (audioEnabled && checkpoint.audioPath) {
+      await narrationService.playCheckpointAudio(checkpoint);
+    }
+  }, [audioEnabled]);
+
+  const {
+    location,
+    isTracking,
+    error,
+    getCurrentPosition,
+    startTracking,
+    stopTracking,
+    resetTriggeredCheckpoints,
+  } = useLocationTracking({
+    distanceInterval: 1000, // Update every 1km
+    onCheckpointEntered: handleCheckpointEntered,
+    checkpoints,
+  });
 
   const scanHorizon = async () => {
     setNarration("Scanning horizon...");
+    setIsLoading(true);
 
     try {
-      let loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High
-      });
-      setLocation(loc);
+      const loc = await getCurrentPosition();
+      const { latitude, longitude, altitude } = loc.coords;
 
-      // Mock narration - will be replaced with Claude API call
-      const mockNarrations = [
-        {
-          text: "You are currently over the European continent. The patchwork of green and brown fields below tells the story of thousands of years of agriculture. Those geometric patterns are a testament to human cultivation dating back to the Neolithic period."
-        },
-        {
-          text: "Below you lies terrain shaped by ancient glaciers. The U-shaped valleys and scattered lakes are remnants of the last Ice Age, approximately 10,000 years ago. The rivers you see carved their paths as the ice retreated northward."
-        },
-        {
-          text: "The coastline visible on the horizon marks the boundary between land and sea that has shifted dramatically over millennia. During the last glacial maximum, this area was dry land, connecting regions now separated by water."
-        }
-      ];
+      // Use Claude API if configured, otherwise fall back to mock
+      const narrationText = await narrationService.generateLiveNarration(
+        latitude,
+        longitude,
+        altitude
+      );
 
-      const randomNarration = mockNarrations[Math.floor(Math.random() * mockNarrations.length)];
+      setNarration(narrationText);
 
-      setTimeout(() => {
-        setNarration(randomNarration.text);
-      }, 1500);
-
-    } catch (error) {
+      // Generate and play audio if ElevenLabs is configured
+      if (audioEnabled && narrationService.hasAudioSupport()) {
+        setNarration(narrationText + "\n\nGenerating audio...");
+        await narrationService.playCurrentNarration(narrationText);
+      }
+    } catch (err) {
       setNarration("Could not get location. Make sure GPS is enabled.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const downloadFlightPack = () => {
+  const downloadFlightPack = async () => {
     if (!flightNumber.trim()) {
-      setNarration("Please enter a flight number first (e.g., BA284, LH123)");
+      setNarration("Please enter a flight number first (e.g., BA115, UA100)");
       return;
     }
 
-    setNarration(`Downloading flight pack for ${flightNumber.toUpperCase()}...\n\nThis will pre-cache all narrations for your route so they work offline during your flight.`);
+    const flightId = flightNumber.toUpperCase();
+    setIsLoading(true);
+    setDownloadProgress(null);
+    setNarration(`Preparing flight pack for ${flightId}...`);
 
-    // Mock download - will be replaced with actual flight path API + Claude pre-generation
-    setTimeout(() => {
-      setNarration(`Flight pack for ${flightNumber.toUpperCase()} ready!\n\n23 checkpoints downloaded.\nEstimated flight time: 4h 32m\n\nYou can now enable Airplane Mode. The app will use GPS to trigger narrations as you fly.`);
-    }, 2000);
+    try {
+      // Check if we have a cached pack first
+      let pack = await narrationService.loadFlightPack(flightId);
+
+      if (!pack) {
+        // Download new pack with progress updates
+        pack = await narrationService.downloadFlightPack(flightId, (status) => {
+          setNarration(`${flightId}: ${status}`);
+        });
+      }
+
+      // Generate audio for checkpoints if ElevenLabs is configured
+      if (narrationService.hasAudioSupport()) {
+        setNarration(`Generating voice narrations for ${flightId}...`);
+
+        pack = await narrationService.generateFlightPackAudio(pack, (completed, total) => {
+          setDownloadProgress({ completed, total });
+          setNarration(
+            `Generating voice narrations...\n\nProgress: ${completed}/${total} checkpoints`
+          );
+        });
+      }
+
+      narrationService.setCurrentFlightPack(pack);
+      setCheckpoints(pack.checkpoints || []);
+      resetTriggeredCheckpoints(); // Clear any previously triggered checkpoints
+      setFlightPackReady(true);
+      setDownloadProgress(null);
+
+      // Build flight info summary
+      const flightInfo = narrationService.getCurrentFlightInfo();
+      const routeText = flightInfo?.origin?.name && flightInfo?.destination?.name
+        ? `${flightInfo.origin.name} → ${flightInfo.destination.name}`
+        : 'Route loaded';
+
+      const durationText = flightInfo?.estimatedDuration
+        ? `Est. duration: ${flightInfo.estimatedDuration}`
+        : '';
+
+      const hasAudio = pack.checkpoints.some(c => c.audioPath);
+      const features = [];
+      if (isApiKeyConfigured('claude')) features.push('AI narrations');
+      if (hasAudio) features.push('Voice audio');
+      if (isApiKeyConfigured('flightData')) features.push('Live route');
+
+      const featureText = features.length > 0
+        ? features.join(' • ')
+        : 'Demo mode (add API keys for full features)';
+
+      setNarration(
+        `Flight pack ready!\n\n` +
+        `${routeText}\n` +
+        `${durationText ? durationText + '\n' : ''}` +
+        `${pack.checkpoints.length} checkpoints\n\n` +
+        `${featureText}\n\n` +
+        `You can now enable Airplane Mode. GPS tracking will trigger narrations as you fly.`
+      );
+    } catch (err) {
+      setNarration(`Failed to download flight pack: ${err.message}`);
+      setDownloadProgress(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleTracking = async () => {
     if (isTracking) {
-      setIsTracking(false);
+      stopTracking();
       setNarration("Live tracking paused. Press 'Start Tracking' to resume.");
     } else {
-      setIsTracking(true);
-      setNarration("Live tracking enabled. Narrations will play automatically as you cross landmarks.");
-
-      // Start watching position
-      await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          distanceInterval: 1000, // Update every 1km
-        },
-        (newLocation) => {
-          setLocation(newLocation);
-          // Here we would check against geofenced checkpoints
-        }
-      );
+      try {
+        await startTracking();
+        setNarration("Live tracking enabled. Narrations will play automatically as you cross landmarks.");
+      } catch (err) {
+        setNarration("Could not start tracking. Check location permissions.");
+      }
     }
-  };
-
-  const formatAltitude = (meters) => {
-    if (!meters) return "---";
-    const feet = Math.round(meters * 3.28084);
-    return feet.toLocaleString();
-  };
-
-  const formatSpeed = (mps) => {
-    if (!mps) return "---";
-    const knots = Math.round(mps * 1.94384);
-    return knots;
   };
 
   return (
@@ -120,32 +180,7 @@ export default function App() {
       </View>
 
       {/* Telemetry Bar */}
-      <View style={styles.telemetry}>
-        <View style={styles.telemetryItem}>
-          <Text style={styles.telemetryLabel}>LAT</Text>
-          <Text style={styles.telemetryValue}>
-            {location?.coords.latitude.toFixed(4) || "---"}
-          </Text>
-        </View>
-        <View style={styles.telemetryItem}>
-          <Text style={styles.telemetryLabel}>LNG</Text>
-          <Text style={styles.telemetryValue}>
-            {location?.coords.longitude.toFixed(4) || "---"}
-          </Text>
-        </View>
-        <View style={styles.telemetryItem}>
-          <Text style={styles.telemetryLabel}>ALT</Text>
-          <Text style={styles.telemetryValue}>
-            {formatAltitude(location?.coords.altitude)} FT
-          </Text>
-        </View>
-        <View style={styles.telemetryItem}>
-          <Text style={styles.telemetryLabel}>SPD</Text>
-          <Text style={styles.telemetryValue}>
-            {formatSpeed(location?.coords.speed)} KTS
-          </Text>
-        </View>
-      </View>
+      <TelemetryDisplay location={location} style={styles.telemetry} />
 
       {/* Flight Number Input */}
       <View style={styles.inputContainer}>
@@ -164,8 +199,11 @@ export default function App() {
 
       {/* Narration Display */}
       <ScrollView style={styles.narrationContainer}>
+        {isLoading && (
+          <ActivityIndicator size="large" color="#00d4ff" style={styles.loader} />
+        )}
         <Text style={styles.narrationText}>
-          {errorMsg || narration}
+          {error || narration}
         </Text>
       </ScrollView>
 
@@ -185,12 +223,24 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      {/* Status Indicator */}
+      {/* Audio Player Controls */}
+      <AudioPlayerControls style={styles.audioControls} />
+
+      {/* Status Bar */}
       <View style={styles.statusBar}>
-        <View style={[styles.statusDot, isTracking && styles.statusDotActive]} />
-        <Text style={styles.statusText}>
-          {isTracking ? "LIVE TRACKING" : "STANDBY"}
-        </Text>
+        <StatusIndicator
+          isActive={isTracking}
+          activeText="LIVE TRACKING"
+          inactiveText="STANDBY"
+        />
+        <TouchableOpacity
+          style={styles.audioToggle}
+          onPress={() => setAudioEnabled(!audioEnabled)}
+        >
+          <Text style={styles.audioToggleText}>
+            {audioEnabled ? '🔊' : '🔇'}
+          </Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -220,26 +270,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   telemetry: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(0, 212, 255, 0.1)',
-    borderRadius: 12,
-    padding: 15,
     marginBottom: 20,
-  },
-  telemetryItem: {
-    alignItems: 'center',
-  },
-  telemetryLabel: {
-    color: '#00d4ff',
-    fontSize: 10,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  telemetryValue: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontFamily: 'monospace',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -270,6 +301,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
+  },
+  loader: {
+    marginBottom: 15,
   },
   narrationText: {
     color: '#ffffff',
@@ -302,26 +336,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+  audioControls: {
+    marginTop: 15,
+  },
   statusBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: 15,
+    gap: 20,
   },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#666',
-    marginRight: 8,
+  audioToggle: {
+    padding: 8,
   },
-  statusDotActive: {
-    backgroundColor: '#00ff88',
-  },
-  statusText: {
-    color: '#666',
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 2,
+  audioToggleText: {
+    fontSize: 20,
   },
 });
