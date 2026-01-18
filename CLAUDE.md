@@ -89,6 +89,7 @@ The app works without any API keys using demo data. Add keys for full functional
     ElevenLabsService.js # Text-to-speech API integration
     AudioService.js     # Audio playback management (expo-av)
     FlightDataService.js # Flight route data (AeroAPI)
+    ShareService.js     # Share narrations via native share sheet or file download
   /utils            # Helper functions
     index.js        # Utility exports
     geofence.js     # Distance calc, geofence checking
@@ -112,9 +113,9 @@ The app works without any API keys using demo data. Add keys for full functional
 - [x] Map view showing current position and upcoming checkpoints (react-leaflet for web)
 - [x] Settings screen with voice, narration, GPS, storage, and API key configuration
 - [x] Flight history and favorite routes (FlightHistoryContext, FlightHistoryModal)
+- [x] Share narrations with other passengers (ShareService, native share sheet / file download)
 
 ## Future Enhancements
-- [ ] Share narrations with other passengers
 - [ ] Integration with Apple/Google Maps for landmark identification
 
 ## Commands
