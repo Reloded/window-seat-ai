@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { calculateBearing } from '../utils/geofence';
 
 export function WindowSideAdvisor({
@@ -106,108 +106,70 @@ export function WindowSideAdvisor({
   if (recommendation === 'EITHER' && confidence < 0.1) return null;
 
   return (
-    <>
-      <TouchableOpacity
-        style={[styles.container, style]}
-        onPress={() => setShowDetails(true)}
+    <View style={[styles.container, style]}>
+      <Pressable
+        style={styles.headerTouchable}
+        onPress={() => setShowDetails(!showDetails)}
       >
         <View style={styles.header}>
           <Text style={styles.label}>WINDOW SEAT</Text>
-          <View style={[
-            styles.recommendationBadge,
-            recommendation === 'LEFT' && styles.badgeLeft,
-            recommendation === 'RIGHT' && styles.badgeRight,
-          ]}>
-            <Text style={styles.recommendationText}>
-              {recommendation === 'EITHER' ? 'EITHER SIDE' : `SIT ${recommendation}`}
-            </Text>
+          <View style={styles.headerRight}>
+            <View style={[
+              styles.recommendationBadge,
+              recommendation === 'LEFT' && styles.badgeLeft,
+              recommendation === 'RIGHT' && styles.badgeRight,
+            ]}>
+              <Text style={styles.recommendationText}>
+                {recommendation === 'EITHER' ? 'EITHER SIDE' : `SIT ${recommendation}`}
+              </Text>
+            </View>
+            <Text style={styles.expandIcon}>{showDetails ? '▼' : '▶'}</Text>
           </View>
         </View>
 
         <Text style={styles.reason}>
           {getRecommendationReason(recommendation, leftNotable, rightNotable)}
         </Text>
+      </Pressable>
 
-        <Text style={styles.hint}>Tap for details</Text>
-      </TouchableOpacity>
-
-      <Modal
-        visible={showDetails}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowDetails(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Window Seat Guide</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setShowDetails(false)}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
+      {showDetails && (
+        <View style={styles.detailsContainer}>
+          <View style={styles.sideSection}>
+            <View style={styles.sideHeader}>
+              <Text style={styles.sideTitle}>← Left</Text>
+              <Text style={styles.sideCount}>{analysis.leftSide.length}</Text>
             </View>
+            {analysis.leftSide.length === 0 ? (
+              <Text style={styles.noLandmarks}>None</Text>
+            ) : (
+              analysis.leftSide.map((landmark, i) => (
+                <View key={i} style={styles.landmarkItem}>
+                  <View style={[styles.importanceDot, getImportanceStyle(landmark.importance)]} />
+                  <Text style={styles.landmarkName} numberOfLines={1}>{landmark.name}</Text>
+                </View>
+              ))
+            )}
+          </View>
 
-            <View style={styles.recommendationLarge}>
-              <Text style={styles.recommendationLargeLabel}>Recommended</Text>
-              <Text style={[
-                styles.recommendationLargeText,
-                recommendation === 'LEFT' && styles.textLeft,
-                recommendation === 'RIGHT' && styles.textRight,
-              ]}>
-                {recommendation === 'EITHER' ? 'Either Side' : `${recommendation} Window`}
-              </Text>
+          <View style={styles.sideSection}>
+            <View style={styles.sideHeader}>
+              <Text style={styles.sideTitle}>Right →</Text>
+              <Text style={styles.sideCount}>{analysis.rightSide.length}</Text>
             </View>
-
-            <ScrollView style={styles.sideComparison}>
-              <View style={styles.sideSection}>
-                <View style={styles.sideHeader}>
-                  <Text style={styles.sideIcon}>👈</Text>
-                  <Text style={styles.sideTitle}>Left Side</Text>
-                  <Text style={styles.sideCount}>{analysis.leftSide.length} landmarks</Text>
+            {analysis.rightSide.length === 0 ? (
+              <Text style={styles.noLandmarks}>None</Text>
+            ) : (
+              analysis.rightSide.map((landmark, i) => (
+                <View key={i} style={styles.landmarkItem}>
+                  <View style={[styles.importanceDot, getImportanceStyle(landmark.importance)]} />
+                  <Text style={styles.landmarkName} numberOfLines={1}>{landmark.name}</Text>
                 </View>
-                {analysis.leftSide.length === 0 ? (
-                  <Text style={styles.noLandmarks}>No notable landmarks</Text>
-                ) : (
-                  analysis.leftSide.map((landmark, i) => (
-                    <View key={i} style={styles.landmarkItem}>
-                      <View style={[styles.importanceDot, getImportanceStyle(landmark.importance)]} />
-                      <Text style={styles.landmarkName}>{landmark.name}</Text>
-                    </View>
-                  ))
-                )}
-              </View>
-
-              <View style={styles.sideSection}>
-                <View style={styles.sideHeader}>
-                  <Text style={styles.sideIcon}>👉</Text>
-                  <Text style={styles.sideTitle}>Right Side</Text>
-                  <Text style={styles.sideCount}>{analysis.rightSide.length} landmarks</Text>
-                </View>
-                {analysis.rightSide.length === 0 ? (
-                  <Text style={styles.noLandmarks}>No notable landmarks</Text>
-                ) : (
-                  analysis.rightSide.map((landmark, i) => (
-                    <View key={i} style={styles.landmarkItem}>
-                      <View style={[styles.importanceDot, getImportanceStyle(landmark.importance)]} />
-                      <Text style={styles.landmarkName}>{landmark.name}</Text>
-                    </View>
-                  ))
-                )}
-              </View>
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.closeButtonLarge}
-              onPress={() => setShowDetails(false)}
-            >
-              <Text style={styles.closeButtonLargeText}>Got it</Text>
-            </TouchableOpacity>
+              ))
+            )}
           </View>
         </View>
-      </Modal>
-    </>
+      )}
+    </View>
   );
 }
 
@@ -266,6 +228,9 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: 'rgba(0, 212, 255, 0.1)',
     borderRadius: 12,
+    overflow: 'hidden',
+  },
+  headerTouchable: {
     padding: 12,
   },
   header: {
@@ -274,17 +239,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   label: {
     color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
   },
+  expandIcon: {
+    color: '#00d4ff',
+    fontSize: 12,
+  },
   recommendationBadge: {
     backgroundColor: '#00d4ff',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
+    marginRight: 8,
   },
   badgeLeft: {
     backgroundColor: '#ff6b6b',
@@ -300,125 +274,54 @@ const styles = StyleSheet.create({
   reason: {
     color: '#ffffff',
     fontSize: 14,
-    marginBottom: 4,
-  },
-  hint: {
-    color: 'rgba(255, 255, 255, 0.4)',
-    fontSize: 11,
   },
 
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#0d1e33',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '85%',
-    padding: 20,
-  },
-  modalHeader: {
+  // Expanded details
+  detailsContainer: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 12,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    color: '#ffffff',
-    fontSize: 20,
-  },
-  recommendationLarge: {
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingVertical: 16,
-    backgroundColor: 'rgba(0, 212, 255, 0.1)',
-    borderRadius: 12,
-  },
-  recommendationLargeLabel: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  recommendationLargeText: {
-    color: '#00d4ff',
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  textLeft: {
-    color: '#ff6b6b',
-  },
-  textRight: {
-    color: '#6bcb77',
-  },
-  sideComparison: {
-    flex: 1,
   },
   sideSection: {
-    marginBottom: 20,
+    flex: 1,
+    paddingHorizontal: 4,
   },
   sideHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  sideIcon: {
-    fontSize: 18,
-    marginRight: 8,
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
   sideTitle: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
-    flex: 1,
   },
   sideCount: {
     color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 12,
+    fontSize: 11,
   },
   noLandmarks: {
     color: 'rgba(255, 255, 255, 0.4)',
-    fontSize: 14,
+    fontSize: 12,
     fontStyle: 'italic',
-    paddingLeft: 26,
   },
   landmarkItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingLeft: 26,
+    paddingVertical: 4,
   },
   importanceDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 10,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 8,
   },
   landmarkName: {
     color: '#ffffff',
-    fontSize: 14,
-  },
-  closeButtonLarge: {
-    backgroundColor: '#00d4ff',
-    borderRadius: 12,
-    padding: 14,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  closeButtonLargeText: {
-    color: '#0a1628',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 12,
+    flex: 1,
   },
 });
 

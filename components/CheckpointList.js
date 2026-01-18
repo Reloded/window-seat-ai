@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { calculateDistance } from '../utils/geofence';
 
 export function CheckpointList({
@@ -9,7 +9,7 @@ export function CheckpointList({
   style,
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [selectedCheckpoint, setSelectedCheckpoint] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(null);
 
   // Calculate distances and find next checkpoint
   const checkpointData = useMemo(() => {
@@ -45,19 +45,24 @@ export function CheckpointList({
 
   if (checkpoints.length === 0) return null;
 
+  const selectedCheckpoint = selectedIndex !== null ? checkpointData[selectedIndex] : null;
+
   return (
-    <>
-      {/* Collapsed view - just shows summary */}
-      <TouchableOpacity
-        style={[styles.container, style]}
-        onPress={() => setExpanded(true)}
+    <View style={[styles.container, style]}>
+      {/* Header - always visible */}
+      <Pressable
+        style={styles.headerTouchable}
+        onPress={() => setExpanded(!expanded)}
       >
         <View style={styles.header}>
           <Text style={styles.title}>Checkpoints</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {triggeredCount}/{checkpoints.length}
-            </Text>
+          <View style={styles.headerRight}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {triggeredCount}/{checkpoints.length}
+              </Text>
+            </View>
+            <Text style={styles.expandIcon}>{expanded ? '▼' : '▶'}</Text>
           </View>
         </View>
         <View style={styles.progressDots}>
@@ -72,132 +77,84 @@ export function CheckpointList({
             />
           ))}
         </View>
-        <Text style={styles.hint}>Tap to view all</Text>
-      </TouchableOpacity>
+      </Pressable>
 
-      {/* Expanded modal with full list */}
-      <Modal
-        visible={expanded}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setExpanded(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>All Checkpoints</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setExpanded(false)}
+      {/* Expanded list - inline */}
+      {expanded && (
+        <View style={styles.expandedList}>
+          <ScrollView style={styles.listScroll} nestedScrollEnabled={true}>
+            {checkpointData.map((checkpoint, index) => (
+              <Pressable
+                key={checkpoint.id || index}
+                style={[
+                  styles.listItem,
+                  checkpoint.isTriggered && styles.listItemTriggered,
+                  index === nextIndex && styles.listItemNext,
+                  selectedIndex === index && styles.listItemSelected,
+                ]}
+                onPress={() => setSelectedIndex(selectedIndex === index ? null : index)}
               >
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.modalSubtitle}>
-              {triggeredCount} of {checkpoints.length} visited
-            </Text>
-
-            <ScrollView style={styles.list}>
-              {checkpointData.map((checkpoint, index) => (
-                <TouchableOpacity
-                  key={checkpoint.id || index}
-                  style={[
-                    styles.listItem,
-                    checkpoint.isTriggered && styles.listItemTriggered,
-                    index === nextIndex && styles.listItemNext,
-                  ]}
-                  onPress={() => setSelectedCheckpoint(checkpoint)}
-                >
-                  <View style={styles.listItemLeft}>
-                    <View style={[
-                      styles.listItemDot,
-                      checkpoint.isTriggered && styles.listItemDotTriggered,
-                      index === nextIndex && styles.listItemDotNext,
-                    ]}>
-                      {checkpoint.isTriggered && (
-                        <Text style={styles.checkmark}>✓</Text>
-                      )}
-                    </View>
-                    <View style={styles.listItemInfo}>
-                      <Text style={[
-                        styles.listItemName,
-                        checkpoint.isTriggered && styles.listItemNameTriggered,
-                      ]}>
-                        {checkpoint.name}
-                      </Text>
-                      {checkpoint.landmark?.type && (
-                        <Text style={styles.listItemType}>
-                          {checkpoint.landmark.type.replace(/_/g, ' ')}
-                        </Text>
-                      )}
-                    </View>
+                <View style={styles.listItemLeft}>
+                  <View style={[
+                    styles.listItemDot,
+                    checkpoint.isTriggered && styles.listItemDotTriggered,
+                    index === nextIndex && styles.listItemDotNext,
+                  ]}>
+                    {checkpoint.isTriggered && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
                   </View>
-                  {checkpoint.distance && (
-                    <Text style={styles.listItemDistance}>
-                      {formatDistance(checkpoint.distance)}
+                  <View style={styles.listItemInfo}>
+                    <Text style={[
+                      styles.listItemName,
+                      checkpoint.isTriggered && styles.listItemNameTriggered,
+                    ]} numberOfLines={1}>
+                      {checkpoint.name}
                     </Text>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+                    {checkpoint.landmark?.type && (
+                      <Text style={styles.listItemType} numberOfLines={1}>
+                        {checkpoint.landmark.type.replace(/_/g, ' ')}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                {checkpoint.distance && (
+                  <Text style={styles.listItemDistance}>
+                    {formatDistance(checkpoint.distance)}
+                  </Text>
+                )}
+              </Pressable>
+            ))}
+          </ScrollView>
 
-      {/* Checkpoint detail modal */}
-      <Modal
-        visible={!!selectedCheckpoint}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setSelectedCheckpoint(null)}
-      >
-        <TouchableOpacity
-          style={styles.detailOverlay}
-          activeOpacity={1}
-          onPress={() => setSelectedCheckpoint(null)}
-        >
-          <View style={styles.detailContent}>
-            <View style={styles.detailHeader}>
-              <Text style={styles.detailTitle}>{selectedCheckpoint?.name}</Text>
-              {selectedCheckpoint?.landmark?.type && (
+          {/* Selected checkpoint detail - inside expanded area */}
+          {selectedCheckpoint && (
+            <View style={styles.detailInline}>
+              <View style={styles.detailHeader}>
+                <Text style={styles.detailTitle}>{selectedCheckpoint.name}</Text>
+                <Pressable onPress={() => setSelectedIndex(null)} style={styles.detailClose}>
+                  <Text style={styles.detailCloseText}>✕</Text>
+                </Pressable>
+              </View>
+              {selectedCheckpoint.landmark?.type && (
                 <Text style={styles.detailType}>
                   {selectedCheckpoint.landmark.type.replace(/_/g, ' ')}
                 </Text>
               )}
-            </View>
-
-            {selectedCheckpoint?.landmark?.region && (
-              <Text style={styles.detailRegion}>
-                {selectedCheckpoint.landmark.region}
-                {selectedCheckpoint.landmark.country && `, ${selectedCheckpoint.landmark.country}`}
-              </Text>
-            )}
-
-            {selectedCheckpoint?.narration && (
-              <ScrollView style={styles.detailNarration}>
-                <Text style={styles.detailNarrationText}>
+              {selectedCheckpoint.narration ? (
+                <Text style={styles.detailNarrationText} numberOfLines={4}>
                   {selectedCheckpoint.narration}
                 </Text>
-              </ScrollView>
-            )}
-
-            {!selectedCheckpoint?.narration && (
-              <Text style={styles.detailNoNarration}>
-                No narration available (add Claude API key for AI narrations)
-              </Text>
-            )}
-
-            <TouchableOpacity
-              style={styles.detailClose}
-              onPress={() => setSelectedCheckpoint(null)}
-            >
-              <Text style={styles.detailCloseText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    </>
+              ) : (
+                <Text style={styles.detailNoNarration}>
+                  No narration available
+                </Text>
+              )}
+            </View>
+          )}
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -215,6 +172,9 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: 'rgba(0, 212, 255, 0.1)',
     borderRadius: 12,
+    overflow: 'hidden',
+  },
+  headerTouchable: {
     padding: 12,
   },
   header: {
@@ -222,6 +182,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   title: {
     color: '#ffffff',
@@ -233,93 +197,63 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,
+    marginRight: 8,
   },
   badgeText: {
     color: '#0a1628',
     fontSize: 12,
     fontWeight: '700',
   },
+  expandIcon: {
+    color: '#00d4ff',
+    fontSize: 12,
+  },
   progressDots: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 4,
-    marginBottom: 6,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    marginRight: 4,
+    marginBottom: 4,
   },
   dotTriggered: {
     backgroundColor: '#00ff88',
   },
   dotNext: {
     backgroundColor: '#00d4ff',
-    shadowColor: '#00d4ff',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-  },
-  hint: {
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 11,
-    textAlign: 'center',
   },
 
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'flex-end',
+  // Expanded list
+  expandedList: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
-  modalContent: {
-    backgroundColor: '#0d1e33',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  modalTitle: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    color: '#ffffff',
-    fontSize: 20,
-  },
-  modalSubtitle: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 14,
-    marginBottom: 16,
-  },
-  list: {
-    flex: 1,
+  listScroll: {
+    maxHeight: 180,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
   },
   listItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+    marginBottom: 2,
   },
   listItemTriggered: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   listItemNext: {
-    backgroundColor: 'rgba(0, 212, 255, 0.15)',
+    backgroundColor: 'rgba(0, 212, 255, 0.12)',
+  },
+  listItemSelected: {
+    backgroundColor: 'rgba(0, 212, 255, 0.2)',
   },
   listItemLeft: {
     flexDirection: 'row',
@@ -327,11 +261,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listItemDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    marginRight: 12,
+    marginRight: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -343,7 +277,7 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     color: '#0a1628',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
   },
   listItemInfo: {
@@ -351,7 +285,7 @@ const styles = StyleSheet.create({
   },
   listItemName: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '500',
   },
   listItemNameTriggered: {
@@ -359,72 +293,60 @@ const styles = StyleSheet.create({
   },
   listItemType: {
     color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 2,
   },
   listItemDistance: {
     color: '#00d4ff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
 
-  // Detail modal
-  detailOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  detailContent: {
-    backgroundColor: '#0d1e33',
-    borderRadius: 16,
-    padding: 20,
-    maxHeight: '70%',
+  // Inline detail
+  detailInline: {
+    backgroundColor: 'rgba(0, 212, 255, 0.15)',
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 212, 255, 0.3)',
+    margin: 8,
+    marginTop: 0,
+    borderRadius: 8,
   },
   detailHeader: {
-    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   detailTitle: {
     color: '#ffffff',
-    fontSize: 22,
+    fontSize: 15,
     fontWeight: '700',
+    flex: 1,
+  },
+  detailClose: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  detailCloseText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 14,
   },
   detailType: {
     color: '#00d4ff',
-    fontSize: 14,
-    marginTop: 4,
+    fontSize: 11,
     textTransform: 'capitalize',
-  },
-  detailRegion: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 14,
-    marginBottom: 16,
-  },
-  detailNarration: {
-    maxHeight: 200,
-    marginBottom: 16,
+    marginTop: 2,
+    marginBottom: 6,
   },
   detailNarrationText: {
-    color: '#ffffff',
-    fontSize: 15,
-    lineHeight: 22,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 13,
+    lineHeight: 18,
   },
   detailNoNarration: {
     color: 'rgba(255, 255, 255, 0.4)',
-    fontSize: 14,
+    fontSize: 12,
     fontStyle: 'italic',
-    marginBottom: 16,
-  },
-  detailClose: {
-    backgroundColor: '#00d4ff',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-  },
-  detailCloseText: {
-    color: '#0a1628',
-    fontSize: 16,
-    fontWeight: '700',
   },
 });
 

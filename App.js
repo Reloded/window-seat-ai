@@ -229,140 +229,147 @@ function AppContent() {
         </TouchableOpacity>
       </View>
 
-      {/* Telemetry Bar */}
-      <TelemetryDisplay location={location} style={styles.telemetry} />
-
-      {/* Sun Tracker */}
-      {location && (
-        <SunTrackerDisplay
-          location={location}
-          route={flightRoute}
-          style={styles.sunTracker}
-        />
-      )}
-
-      {/* Border Crossing Alert */}
-      <BorderCrossingAlert
-        location={location}
-        isTracking={isTracking}
-        style={styles.borderCrossing}
-      />
-
-      {/* Next Checkpoint Display */}
-      {flightPackReady && checkpoints.length > 0 && (
-        <NextCheckpointDisplay
-          location={location}
-          checkpoints={checkpoints}
-          triggeredCheckpoints={triggeredCheckpoints}
-          style={styles.nextCheckpoint}
-        />
-      )}
-
-      {/* Flight Number Input */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Flight Number (e.g., BA284)"
-          placeholderTextColor="#666"
-          value={flightNumber}
-          onChangeText={setFlightNumber}
-          autoCapitalize="characters"
-        />
-        <TouchableOpacity style={styles.downloadBtn} onPress={downloadFlightPack}>
-          <Text style={styles.downloadBtnText}>Download</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Map View */}
-      {flightPackReady && (
-        <FlightMap
-          route={flightRoute}
-          checkpoints={checkpoints}
-          location={location}
-          triggeredCheckpoints={triggeredCheckpoints}
-          isExpanded={mapExpanded}
-          onToggleExpand={() => setMapExpanded(!mapExpanded)}
-        />
-      )}
-
-      {/* Flight Progress Bar */}
-      {flightPackReady && flightRoute.length > 0 && (
-        <FlightProgressBar
-          location={location}
-          route={flightRoute}
-          origin={flightOrigin}
-          destination={flightDestination}
-          style={styles.progressBar}
-        />
-      )}
-
-      {/* Checkpoint List */}
-      {flightPackReady && checkpoints.length > 0 && (
-        <CheckpointList
-          checkpoints={checkpoints}
-          triggeredCheckpoints={triggeredCheckpoints}
-          location={location}
-          style={styles.checkpointList}
-        />
-      )}
-
-      {/* Window Side Advisor */}
-      {flightPackReady && flightRoute.length > 1 && checkpoints.length > 0 && (
-        <WindowSideAdvisor
-          route={flightRoute}
-          checkpoints={checkpoints}
-          style={styles.windowSideAdvisor}
-        />
-      )}
-
-      {/* Narration Display */}
+      {/* Main Scrollable Content */}
       <ScrollView
-        style={[styles.narrationContainer, mapExpanded && styles.narrationCollapsed]}
-        contentContainerStyle={styles.narrationContent}
+        style={styles.mainScrollView}
+        contentContainerStyle={styles.mainScrollContent}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
       >
-        {isLoading && (
-          <ActivityIndicator size="large" color="#00d4ff" style={styles.loader} />
+        {/* Telemetry Bar */}
+        <TelemetryDisplay location={location} style={styles.telemetry} />
+
+        {/* Sun Tracker */}
+        {location && (
+          <SunTrackerDisplay
+            location={location}
+            route={flightRoute}
+            style={styles.sunTracker}
+          />
         )}
-        <Text style={styles.narrationText}>
-          {error || narration}
-        </Text>
-      </ScrollView>
 
-      {/* Action Buttons */}
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[styles.button, styles.buttonSecondary]}
-          onPress={toggleTracking}
-        >
-          <Text style={styles.buttonTextSecondary}>
-            {isTracking ? "Stop Tracking" : "Start Tracking"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.button} onPress={scanHorizon}>
-          <Text style={styles.buttonText}>Scan Horizon</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Audio Player Controls */}
-      <AudioPlayerControls style={styles.audioControls} />
-
-      {/* Status Bar */}
-      <View style={styles.statusBar}>
-        <StatusIndicator
-          isActive={isTracking}
-          activeText="LIVE TRACKING"
-          inactiveText="STANDBY"
+        {/* Border Crossing Alert */}
+        <BorderCrossingAlert
+          location={location}
+          isTracking={isTracking}
+          style={styles.borderCrossing}
         />
-        <TouchableOpacity
-          style={styles.audioToggle}
-          onPress={() => setAudioEnabled(!audioEnabled)}
+
+        {/* Next Checkpoint Display */}
+        {flightPackReady && checkpoints.length > 0 && (
+          <NextCheckpointDisplay
+            location={location}
+            checkpoints={checkpoints}
+            triggeredCheckpoints={triggeredCheckpoints}
+            style={styles.nextCheckpoint}
+          />
+        )}
+
+        {/* Flight Number Input */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter Flight Number (e.g., BA284)"
+            placeholderTextColor="#666"
+            value={flightNumber}
+            onChangeText={setFlightNumber}
+            autoCapitalize="characters"
+          />
+          <TouchableOpacity style={styles.downloadBtn} onPress={downloadFlightPack}>
+            <Text style={styles.downloadBtnText}>Download</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Map View */}
+        {flightPackReady && (
+          <FlightMap
+            route={flightRoute}
+            checkpoints={checkpoints}
+            location={location}
+            triggeredCheckpoints={triggeredCheckpoints}
+            isExpanded={mapExpanded}
+            onToggleExpand={() => setMapExpanded(!mapExpanded)}
+          />
+        )}
+
+        {/* Flight Progress Bar */}
+        {flightPackReady && flightRoute.length > 0 && (
+          <FlightProgressBar
+            location={location}
+            route={flightRoute}
+            origin={flightOrigin}
+            destination={flightDestination}
+            style={styles.progressBar}
+          />
+        )}
+
+        {/* Checkpoint List */}
+        {flightPackReady && checkpoints.length > 0 && (
+          <CheckpointList
+            checkpoints={checkpoints}
+            triggeredCheckpoints={triggeredCheckpoints}
+            location={location}
+            style={styles.checkpointList}
+          />
+        )}
+
+        {/* Window Side Advisor */}
+        {flightPackReady && flightRoute.length > 1 && checkpoints.length > 0 && (
+          <WindowSideAdvisor
+            route={flightRoute}
+            checkpoints={checkpoints}
+            style={styles.windowSideAdvisor}
+          />
+        )}
+
+        {/* Narration Display */}
+        <View
+          style={[styles.narrationContainer, mapExpanded && styles.narrationCollapsed]}
         >
-          <Text style={styles.audioToggleText}>
-            {audioEnabled ? '🔊' : '🔇'}
+          {isLoading && (
+            <ActivityIndicator size="large" color="#00d4ff" style={styles.loader} />
+          )}
+          <Text style={styles.narrationText}>
+            {error || narration}
           </Text>
-        </TouchableOpacity>
-      </View>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.button, styles.buttonSecondary]}
+            onPress={toggleTracking}
+          >
+            <Text style={styles.buttonTextSecondary}>
+              {isTracking ? "Stop Tracking" : "Start Tracking"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.button} onPress={scanHorizon}>
+            <Text style={styles.buttonText}>Scan Horizon</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Audio Player Controls */}
+        <AudioPlayerControls style={styles.audioControls} />
+
+        {/* Status Bar */}
+        <View style={styles.statusBar}>
+          <StatusIndicator
+            isActive={isTracking}
+            activeText="LIVE TRACKING"
+            inactiveText="STANDBY"
+          />
+          <TouchableOpacity
+            style={styles.audioToggle}
+            onPress={() => setAudioEnabled(!audioEnabled)}
+          >
+            <Text style={styles.audioToggleText}>
+              {audioEnabled ? '🔊' : '🔇'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
 
       {/* Settings Modal */}
       <SettingsModal
@@ -401,7 +408,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0a1628',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  mainScrollView: {
+    flex: 1,
+  },
+  mainScrollContent: {
+    paddingBottom: 30,
   },
   header: {
     flexDirection: 'row',
@@ -460,7 +474,6 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     marginBottom: 20,
-    gap: 10,
   },
   input: {
     flex: 1,
@@ -469,6 +482,7 @@ const styles = StyleSheet.create({
     padding: 15,
     color: '#ffffff',
     fontSize: 16,
+    marginRight: 10,
   },
   downloadBtn: {
     backgroundColor: '#00d4ff',
@@ -481,18 +495,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   narrationContainer: {
-    flex: 1,
     backgroundColor: '#0d1e33',
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
+    minHeight: 120,
   },
   narrationCollapsed: {
     maxHeight: 100,
-    flex: 0,
-  },
-  narrationContent: {
-    flexGrow: 1,
   },
   loader: {
     marginBottom: 15,
@@ -504,7 +514,6 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: 'row',
-    gap: 15,
   },
   button: {
     flex: 1,
@@ -512,6 +521,7 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 30,
     alignItems: 'center',
+    marginHorizontal: 5,
   },
   buttonSecondary: {
     backgroundColor: 'transparent',
@@ -536,10 +546,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 15,
-    gap: 20,
   },
   audioToggle: {
     padding: 8,
+    marginLeft: 20,
   },
   audioToggleText: {
     fontSize: 20,

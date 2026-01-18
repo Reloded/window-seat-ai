@@ -195,38 +195,44 @@ class FlightDataService {
     const mockRoutes = {
       // London to New York
       'BA115': this.generateGreatCircleRoute(
-        { lat: 51.4700, lng: -0.4543, name: 'London Heathrow' },
-        { lat: 40.6413, lng: -73.7781, name: 'New York JFK' },
-        'BA', 'British Airways'
+        { lat: 51.4700, lng: -0.4543, name: 'London Heathrow', code: 'LHR' },
+        { lat: 40.6413, lng: -73.7781, name: 'New York JFK', code: 'JFK' },
+        'BA', 'British Airways', 'BA115'
       ),
       'BA117': this.generateGreatCircleRoute(
-        { lat: 51.4700, lng: -0.4543, name: 'London Heathrow' },
-        { lat: 40.6413, lng: -73.7781, name: 'New York JFK' },
-        'BA', 'British Airways'
+        { lat: 51.4700, lng: -0.4543, name: 'London Heathrow', code: 'LHR' },
+        { lat: 40.6413, lng: -73.7781, name: 'New York JFK', code: 'JFK' },
+        'BA', 'British Airways', 'BA117'
       ),
       // New York to London
       'BA178': this.generateGreatCircleRoute(
-        { lat: 40.6413, lng: -73.7781, name: 'New York JFK' },
-        { lat: 51.4700, lng: -0.4543, name: 'London Heathrow' },
-        'BA', 'British Airways'
+        { lat: 40.6413, lng: -73.7781, name: 'New York JFK', code: 'JFK' },
+        { lat: 51.4700, lng: -0.4543, name: 'London Heathrow', code: 'LHR' },
+        'BA', 'British Airways', 'BA178'
+      ),
+      // San Francisco to London
+      'BA284': this.generateGreatCircleRoute(
+        { lat: 37.6213, lng: -122.3790, name: 'San Francisco International', code: 'SFO' },
+        { lat: 51.4700, lng: -0.4543, name: 'London Heathrow', code: 'LHR' },
+        'BA', 'British Airways', 'BA284'
       ),
       // London to Dubai
       'EK002': this.generateGreatCircleRoute(
-        { lat: 51.4700, lng: -0.4543, name: 'London Heathrow' },
-        { lat: 25.2532, lng: 55.3657, name: 'Dubai International' },
-        'EK', 'Emirates'
+        { lat: 51.4700, lng: -0.4543, name: 'London Heathrow', code: 'LHR' },
+        { lat: 25.2532, lng: 55.3657, name: 'Dubai International', code: 'DXB' },
+        'EK', 'Emirates', 'EK002'
       ),
       // San Francisco to Tokyo
       'JL001': this.generateGreatCircleRoute(
-        { lat: 37.6213, lng: -122.3790, name: 'San Francisco SFO' },
-        { lat: 35.5494, lng: 139.7798, name: 'Tokyo Haneda' },
-        'JL', 'Japan Airlines'
+        { lat: 37.6213, lng: -122.3790, name: 'San Francisco International', code: 'SFO' },
+        { lat: 35.5494, lng: 139.7798, name: 'Tokyo Haneda', code: 'HND' },
+        'JL', 'Japan Airlines', 'JL001'
       ),
       // Los Angeles to Sydney
       'QF12': this.generateGreatCircleRoute(
-        { lat: 33.9425, lng: -118.4081, name: 'Los Angeles LAX' },
-        { lat: -33.9399, lng: 151.1753, name: 'Sydney SYD' },
-        'QF', 'Qantas'
+        { lat: 33.9425, lng: -118.4081, name: 'Los Angeles International', code: 'LAX' },
+        { lat: -33.9399, lng: 151.1753, name: 'Sydney Kingsford Smith', code: 'SYD' },
+        'QF', 'Qantas', 'QF12'
       ),
     };
 
@@ -249,21 +255,23 @@ class FlightDataService {
           { lat: originAirport.latitude, lng: originAirport.longitude, name: originAirport.name, code: originCode },
           { lat: destAirport.latitude, lng: destAirport.longitude, name: destAirport.name, code: destCode },
           'XX',
-          'Demo Route'
+          'Demo Route',
+          flightNumber
         );
       }
     }
 
     // Generate a default transatlantic route
     return this.generateGreatCircleRoute(
-      { lat: 51.4700, lng: -0.4543, name: 'London Heathrow' },
-      { lat: 40.6413, lng: -73.7781, name: 'New York JFK' },
+      { lat: 51.4700, lng: -0.4543, name: 'London Heathrow', code: 'LHR' },
+      { lat: 40.6413, lng: -73.7781, name: 'New York JFK', code: 'JFK' },
       this.extractAirline(flightNumber) || 'XX',
-      'Demo Airline'
+      'Demo Airline',
+      flightNumber
     );
   }
 
-  generateGreatCircleRoute(origin, destination, airlineCode, airlineName) {
+  generateGreatCircleRoute(origin, destination, airlineCode, airlineName, flightNum = null) {
     const route = [];
     const numPoints = 25;
 
@@ -306,7 +314,7 @@ class FlightDataService {
     });
 
     return {
-      flightNumber: `${airlineCode}XXX`,
+      flightNumber: flightNum || `${airlineCode}XXX`,
       airline: airlineName,
       origin: {
         code: origin.code || 'XXX',
