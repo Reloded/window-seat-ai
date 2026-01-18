@@ -246,8 +246,8 @@ class FlightDataService {
 
       if (originAirport.latitude && destAirport.latitude) {
         return this.generateGreatCircleRoute(
-          { lat: originAirport.latitude, lng: originAirport.longitude, name: originAirport.name },
-          { lat: destAirport.latitude, lng: destAirport.longitude, name: destAirport.name },
+          { lat: originAirport.latitude, lng: originAirport.longitude, name: originAirport.name, code: originCode },
+          { lat: destAirport.latitude, lng: destAirport.longitude, name: destAirport.name, code: destCode },
           'XX',
           'Demo Route'
         );
@@ -309,13 +309,13 @@ class FlightDataService {
       flightNumber: `${airlineCode}XXX`,
       airline: airlineName,
       origin: {
-        code: 'XXX',
+        code: origin.code || 'XXX',
         name: origin.name,
         latitude: origin.lat,
         longitude: origin.lng,
       },
       destination: {
-        code: 'YYY',
+        code: destination.code || 'YYY',
         name: destination.name,
         latitude: destination.lat,
         longitude: destination.lng,

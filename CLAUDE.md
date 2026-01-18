@@ -45,6 +45,7 @@ The app works without any API keys using demo data. Add keys for full functional
     StatusIndicator.js   # Tracking status indicator
     AudioPlayerControls.js # Audio playback controls
     NextCheckpointDisplay.js # Distance/ETA to next checkpoint
+    FlightProgressBar.js # Visual flight progress with % complete
     /map              # Map view components
       index.js        # Map component exports
       FlightMap.js    # Interactive map with route and checkpoints

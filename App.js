@@ -10,7 +10,7 @@ import {
   StatusBar,
   ActivityIndicator
 } from 'react-native';
-import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightMap, SettingsModal, FlightHistoryModal } from './components';
+import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, FlightMap, SettingsModal, FlightHistoryModal } from './components';
 import { useLocationTracking, useSettingsSync } from './hooks';
 import { narrationService } from './services';
 import { isApiKeyConfigured } from './config';
@@ -28,6 +28,8 @@ function AppContent() {
   const [checkpoints, setCheckpoints] = useState([]);
   const [mapExpanded, setMapExpanded] = useState(false);
   const [flightRoute, setFlightRoute] = useState([]);
+  const [flightOrigin, setFlightOrigin] = useState(null);
+  const [flightDestination, setFlightDestination] = useState(null);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
 
@@ -135,6 +137,8 @@ function AppContent() {
       narrationService.setCurrentFlightPack(pack);
       setCheckpoints(pack.checkpoints || []);
       setFlightRoute(pack.route || []);
+      setFlightOrigin(pack.origin || null);
+      setFlightDestination(pack.destination || null);
       resetTriggeredCheckpoints(); // Clear any previously triggered checkpoints
       setFlightPackReady(true);
       setDownloadProgress(null);
@@ -265,6 +269,17 @@ function AppContent() {
         />
       )}
 
+      {/* Flight Progress Bar */}
+      {flightPackReady && flightRoute.length > 0 && (
+        <FlightProgressBar
+          location={location}
+          route={flightRoute}
+          origin={flightOrigin}
+          destination={flightDestination}
+          style={styles.progressBar}
+        />
+      )}
+
       {/* Narration Display */}
       <ScrollView
         style={[styles.narrationContainer, mapExpanded && styles.narrationCollapsed]}
@@ -390,6 +405,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   nextCheckpoint: {
+    marginBottom: 10,
+  },
+  progressBar: {
     marginBottom: 10,
   },
   inputContainer: {
