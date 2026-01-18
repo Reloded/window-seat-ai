@@ -10,7 +10,7 @@ import {
   StatusBar,
   ActivityIndicator
 } from 'react-native';
-import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, FlightMap, SettingsModal, FlightHistoryModal } from './components';
+import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, FlightMap, SettingsModal, FlightHistoryModal } from './components';
 import { useLocationTracking, useSettingsSync } from './hooks';
 import { narrationService } from './services';
 import { isApiKeyConfigured } from './config';
@@ -280,6 +280,16 @@ function AppContent() {
         />
       )}
 
+      {/* Checkpoint List */}
+      {flightPackReady && checkpoints.length > 0 && (
+        <CheckpointList
+          checkpoints={checkpoints}
+          triggeredCheckpoints={triggeredCheckpoints}
+          location={location}
+          style={styles.checkpointList}
+        />
+      )}
+
       {/* Narration Display */}
       <ScrollView
         style={[styles.narrationContainer, mapExpanded && styles.narrationCollapsed]}
@@ -408,6 +418,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   progressBar: {
+    marginBottom: 10,
+  },
+  checkpointList: {
     marginBottom: 10,
   },
   inputContainer: {
