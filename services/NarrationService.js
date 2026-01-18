@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import { Platform } from 'react-native';
 import { claudeService } from './ClaudeService';
 import { elevenLabsService } from './ElevenLabsService';
 import { audioService } from './AudioService';
@@ -6,7 +6,13 @@ import { flightDataService } from './FlightDataService';
 import { isApiKeyConfigured } from '../config/api';
 import { routeToCheckpoints, estimateFlightDuration, formatDuration } from '../utils/routeUtils';
 
-const NARRATION_CACHE_DIR = `${FileSystem.documentDirectory}narrations/`;
+// Only import FileSystem on native platforms
+let FileSystem = null;
+let NARRATION_CACHE_DIR = '';
+if (Platform.OS !== 'web') {
+  FileSystem = require('expo-file-system/legacy');
+  NARRATION_CACHE_DIR = `${FileSystem.documentDirectory}narrations/`;
+}
 
 class NarrationService {
   constructor() {
@@ -22,6 +28,7 @@ class NarrationService {
   }
 
   async ensureCacheDir() {
+    if (Platform.OS === 'web' || !FileSystem) return;
     const dirInfo = await FileSystem.getInfoAsync(NARRATION_CACHE_DIR);
     if (!dirInfo.exists) {
       await FileSystem.makeDirectoryAsync(NARRATION_CACHE_DIR, { intermediates: true });
@@ -136,6 +143,8 @@ class NarrationService {
   }
 
   async saveFlightPack(pack) {
+    // On web, only use memory storage
+    if (Platform.OS === 'web' || !FileSystem) return;
     const filePath = `${NARRATION_CACHE_DIR}${pack.id}.json`;
     await FileSystem.writeAsStringAsync(filePath, JSON.stringify(pack));
   }
@@ -147,6 +156,9 @@ class NarrationService {
     if (this.flightPacks.has(packId)) {
       return this.flightPacks.get(packId);
     }
+
+    // On web, only use memory cache
+    if (Platform.OS === 'web' || !FileSystem) return null;
 
     // Check file cache
     const filePath = `${NARRATION_CACHE_DIR}${packId}.json`;
@@ -163,6 +175,16 @@ class NarrationService {
   }
 
   async listCachedFlightPacks() {
+    // On web, return memory-cached packs only
+    if (Platform.OS === 'web' || !FileSystem) {
+      return Array.from(this.flightPacks.values()).map(pack => ({
+        id: pack.id,
+        flightNumber: pack.flightNumber,
+        downloadedAt: pack.downloadedAt,
+        checkpointCount: pack.checkpoints.length,
+      }));
+    }
+
     const files = await FileSystem.readDirectoryAsync(NARRATION_CACHE_DIR);
     const packs = [];
 
@@ -184,10 +206,13 @@ class NarrationService {
 
   async deleteFlightPack(flightNumber) {
     const packId = flightNumber.toUpperCase().replace(/\s/g, '');
-    const filePath = `${NARRATION_CACHE_DIR}${packId}.json`;
-
-    await FileSystem.deleteAsync(filePath, { idempotent: true });
     this.flightPacks.delete(packId);
+
+    // On web, only clear memory
+    if (Platform.OS === 'web' || !FileSystem) return;
+
+    const filePath = `${NARRATION_CACHE_DIR}${packId}.json`;
+    await FileSystem.deleteAsync(filePath, { idempotent: true });
   }
 
   setCurrentFlightPack(pack) {

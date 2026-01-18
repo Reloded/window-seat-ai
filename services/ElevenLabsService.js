@@ -1,8 +1,15 @@
-import * as FileSystem from 'expo-file-system';
+import { Platform } from 'react-native';
 import { API_CONFIG, isApiKeyConfigured } from '../config/api';
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
-const AUDIO_CACHE_DIR = `${FileSystem.documentDirectory}audio/`;
+
+// Only import FileSystem on native platforms
+let FileSystem = null;
+let AUDIO_CACHE_DIR = '';
+if (Platform.OS !== 'web') {
+  FileSystem = require('expo-file-system/legacy');
+  AUDIO_CACHE_DIR = `${FileSystem.documentDirectory}audio/`;
+}
 
 class ElevenLabsService {
   constructor() {
@@ -11,6 +18,7 @@ class ElevenLabsService {
   }
 
   async ensureCacheDir() {
+    if (Platform.OS === 'web' || !FileSystem) return;
     const dirInfo = await FileSystem.getInfoAsync(AUDIO_CACHE_DIR);
     if (!dirInfo.exists) {
       await FileSystem.makeDirectoryAsync(AUDIO_CACHE_DIR, { intermediates: true });
@@ -78,6 +86,12 @@ class ElevenLabsService {
   }
 
   async generateAndSaveAudio(text, filename, options = {}) {
+    // Audio file saving not supported on web
+    if (Platform.OS === 'web' || !FileSystem) {
+      console.log('Audio file saving not supported on web');
+      return null;
+    }
+
     await this.ensureCacheDir();
 
     const audioBlob = await this.generateSpeech(text, options);
@@ -139,12 +153,14 @@ class ElevenLabsService {
   }
 
   async getAudioFilePath(checkpointId) {
+    if (Platform.OS === 'web' || !FileSystem) return null;
     const filePath = `${AUDIO_CACHE_DIR}checkpoint_${checkpointId}.mp3`;
     const fileInfo = await FileSystem.getInfoAsync(filePath);
     return fileInfo.exists ? filePath : null;
   }
 
   async clearAudioCache() {
+    if (Platform.OS === 'web' || !FileSystem) return;
     const dirInfo = await FileSystem.getInfoAsync(AUDIO_CACHE_DIR);
     if (dirInfo.exists) {
       await FileSystem.deleteAsync(AUDIO_CACHE_DIR, { idempotent: true });
@@ -153,6 +169,7 @@ class ElevenLabsService {
   }
 
   async getCacheSize() {
+    if (Platform.OS === 'web' || !FileSystem) return 0;
     const dirInfo = await FileSystem.getInfoAsync(AUDIO_CACHE_DIR);
     if (!dirInfo.exists) return 0;
 
