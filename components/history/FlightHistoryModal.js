@@ -13,6 +13,7 @@ import {
 import { FlightHistoryTabs } from './FlightHistoryTabs';
 import { FlightHistoryList } from './FlightHistoryList';
 import { useFlightHistory } from '../../contexts';
+import { narrationService, shareService } from '../../services';
 
 export function FlightHistoryModal({ visible, onClose, onSelectFlight }) {
   const [activeTab, setActiveTab] = useState('all');
@@ -55,6 +56,41 @@ export function FlightHistoryModal({ visible, onClose, onSelectFlight }) {
     onClose();
   };
 
+  const handleShareFlight = async (flight) => {
+    try {
+      // Load the full pack from cache
+      const pack = await narrationService.loadFlightPack(flight.flightNumber);
+
+      if (!pack) {
+        const message = 'Flight pack not cached. Please download it first.';
+        if (Platform.OS === 'web') {
+          alert(message);
+        } else {
+          Alert.alert('Cannot Share', message);
+        }
+        return;
+      }
+
+      const result = await shareService.shareFlight(pack);
+      if (!result.success && result.error) {
+        const message = `Share failed: ${result.error}`;
+        if (Platform.OS === 'web') {
+          alert(message);
+        } else {
+          Alert.alert('Share Error', message);
+        }
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
+      const message = 'An error occurred while sharing.';
+      if (Platform.OS === 'web') {
+        alert(message);
+      } else {
+        Alert.alert('Share Error', message);
+      }
+    }
+  };
+
   const emptyMessage = activeTab === 'all'
     ? 'No flights yet.\nDownload a flight pack to get started.'
     : 'No favorite flights.\nTap the star on any flight to add it here.';
@@ -90,6 +126,7 @@ export function FlightHistoryModal({ visible, onClose, onSelectFlight }) {
             onToggleFavorite={toggleFavorite}
             onSelectFlight={handleSelectFlight}
             onDeleteFlight={handleDeleteFlight}
+            onShareFlight={handleShareFlight}
             emptyMessage={emptyMessage}
           />
         </View>

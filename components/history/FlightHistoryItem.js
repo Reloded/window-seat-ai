@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 
 export function FlightHistoryItem({
   flight,
   onToggleFavorite,
   onSelect,
   onDelete,
+  onShare,
 }) {
   const formatDate = (isoString) => {
     if (!isoString) return '';
@@ -73,17 +74,34 @@ export function FlightHistoryItem({
         )}
       </View>
 
-      {/* Delete button */}
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      >
-        <Text style={styles.deleteIcon}>×</Text>
-      </TouchableOpacity>
+      {/* Action buttons */}
+      <View style={styles.actionButtons}>
+        {/* Share button */}
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            onShare();
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.shareIcon}>
+            {Platform.OS === 'web' ? '↓' : '↗'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Delete button */}
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.deleteIcon}>×</Text>
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -143,9 +161,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontStyle: 'italic',
   },
-  deleteButton: {
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingLeft: 12,
+    paddingLeft: 8,
+  },
+  actionButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  shareIcon: {
+    fontSize: 22,
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   deleteIcon: {
     fontSize: 28,

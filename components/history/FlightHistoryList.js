@@ -7,6 +7,7 @@ export function FlightHistoryList({
   onToggleFavorite,
   onSelectFlight,
   onDeleteFlight,
+  onShareFlight,
   emptyMessage,
 }) {
   const renderItem = ({ item }) => (
@@ -15,6 +16,7 @@ export function FlightHistoryList({
       onToggleFavorite={() => onToggleFavorite(item.id)}
       onSelect={() => onSelectFlight(item)}
       onDelete={() => onDeleteFlight(item.id)}
+      onShare={() => onShareFlight(item)}
     />
   );
 
