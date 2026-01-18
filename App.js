@@ -10,7 +10,7 @@ import {
   StatusBar,
   ActivityIndicator
 } from 'react-native';
-import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, FlightMap, SettingsModal, FlightHistoryModal } from './components';
+import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, SunTrackerDisplay, FlightMap, SettingsModal, FlightHistoryModal } from './components';
 import { useLocationTracking, useSettingsSync } from './hooks';
 import { narrationService } from './services';
 import { isApiKeyConfigured } from './config';
@@ -232,6 +232,15 @@ function AppContent() {
       {/* Telemetry Bar */}
       <TelemetryDisplay location={location} style={styles.telemetry} />
 
+      {/* Sun Tracker */}
+      {location && (
+        <SunTrackerDisplay
+          location={location}
+          route={flightRoute}
+          style={styles.sunTracker}
+        />
+      )}
+
       {/* Next Checkpoint Display */}
       {flightPackReady && checkpoints.length > 0 && (
         <NextCheckpointDisplay
@@ -421,6 +430,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   telemetry: {
+    marginBottom: 10,
+  },
+  sunTracker: {
     marginBottom: 10,
   },
   nextCheckpoint: {

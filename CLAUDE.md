@@ -48,6 +48,7 @@ The app works without any API keys using demo data. Add keys for full functional
     FlightProgressBar.js # Visual flight progress with % complete
     CheckpointList.js # Scrollable list of all checkpoints
     WindowSideAdvisor.js # Recommends left/right window seat based on landmarks
+    SunTrackerDisplay.js # Shows sun position, golden hour, sunrise/sunset times
     /map              # Map view components
       index.js        # Map component exports
       FlightMap.js    # Interactive map with route and checkpoints
@@ -96,6 +97,7 @@ The app works without any API keys using demo data. Add keys for full functional
     FlightDataService.js # Flight route data (AeroAPI)
     ShareService.js     # Share narrations via native share sheet or file download
     LandmarkService.js  # Reverse geocoding & POI lookup (OpenStreetMap)
+    SunPositionService.js # Sunrise/sunset calculations and sun position
   /utils            # Helper functions
     index.js        # Utility exports
     geofence.js     # Distance calc, geofence checking
@@ -122,6 +124,7 @@ The app works without any API keys using demo data. Add keys for full functional
 - [x] Share narrations with other passengers (ShareService, native share sheet / file download)
 - [x] Landmark identification using OpenStreetMap (LandmarkService with Nominatim + Overpass API)
 - [x] Window side advisor recommending left/right seat based on landmarks along route
+- [x] Sunrise/sunset tracker with golden hour alerts and viewing side recommendations
 
 ## Future Enhancements
 (No pending enhancements - MVP complete)
