@@ -1,9 +1,10 @@
 import * as Location from 'expo-location';
+import { EventEmitter } from './base';
 
-class LocationService {
+class LocationService extends EventEmitter {
   constructor() {
+    super();
     this.watchSubscription = null;
-    this.listeners = [];
     this.currentLocation = null;
     this.isTracking = false;
     this.permissionGranted = false;
@@ -85,7 +86,7 @@ class LocationService {
       trackingOptions,
       (location) => {
         this.currentLocation = location;
-        this.notifyListeners(location);
+        this.emit(location);
       }
     );
 
@@ -98,19 +99,6 @@ class LocationService {
       this.watchSubscription = null;
     }
     this.isTracking = false;
-  }
-
-  subscribe(callback) {
-    this.listeners.push(callback);
-
-    // Return unsubscribe function
-    return () => {
-      this.listeners = this.listeners.filter(cb => cb !== callback);
-    };
-  }
-
-  notifyListeners(location) {
-    this.listeners.forEach(callback => callback(location));
   }
 
   getLocation() {

@@ -4,39 +4,25 @@
  */
 
 import { apiConfig } from '../config';
+import { EventEmitter } from './base';
 
-class BorderCrossingService {
+class BorderCrossingService extends EventEmitter {
   constructor() {
+    super();
     this.currentRegion = null;
     this.lastCheckTime = 0;
     this.lastCheckPosition = null;
     this.checkIntervalMs = 30000; // Check every 30 seconds
     this.minDistanceKm = 5; // Or when moved 5km
-    this.listeners = [];
     this.isChecking = false;
   }
 
   /**
    * Subscribe to border crossing events
+   * @deprecated Use subscribe() instead
    */
   onBorderCrossing(callback) {
-    this.listeners.push(callback);
-    return () => {
-      this.listeners = this.listeners.filter(l => l !== callback);
-    };
-  }
-
-  /**
-   * Notify listeners of border crossing
-   */
-  notifyListeners(event) {
-    this.listeners.forEach(callback => {
-      try {
-        callback(event);
-      } catch (error) {
-        console.warn('Border crossing listener error:', error);
-      }
-    });
+    return this.subscribe(callback);
   }
 
   /**
@@ -93,7 +79,7 @@ class BorderCrossingService {
       const crossing = this.detectCrossing(region);
 
       if (crossing) {
-        this.notifyListeners(crossing);
+        this.emit(crossing);
       }
 
       this.currentRegion = region;

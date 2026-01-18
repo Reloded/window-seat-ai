@@ -1,12 +1,13 @@
 import { Audio } from 'expo-av';
+import { EventEmitter } from './base';
 
-class AudioService {
+class AudioService extends EventEmitter {
   constructor() {
+    super();
     this.sound = null;
     this.isPlaying = false;
     this.isPaused = false;
     this.currentUri = null;
-    this.listeners = [];
     this.playbackStatus = null;
     this.defaultVolume = 0.8;
   }
@@ -60,11 +61,11 @@ class AudioService {
       if (status.didJustFinish) {
         this.isPlaying = false;
         this.isPaused = false;
-        this.notifyListeners('finished');
+        this.emit('finished');
       }
     }
 
-    this.notifyListeners('statusUpdate', status);
+    this.emit('statusUpdate', status);
   }
 
   async play() {
@@ -74,7 +75,7 @@ class AudioService {
       await this.sound.playAsync();
       this.isPlaying = true;
       this.isPaused = false;
-      this.notifyListeners('playing');
+      this.emit('playing');
       return true;
     } catch (error) {
       console.error('Failed to play audio:', error);
@@ -89,7 +90,7 @@ class AudioService {
       await this.sound.pauseAsync();
       this.isPlaying = false;
       this.isPaused = true;
-      this.notifyListeners('paused');
+      this.emit('paused');
       return true;
     } catch (error) {
       console.error('Failed to pause audio:', error);
@@ -105,7 +106,7 @@ class AudioService {
       await this.sound.setPositionAsync(0);
       this.isPlaying = false;
       this.isPaused = false;
-      this.notifyListeners('stopped');
+      this.emit('stopped');
       return true;
     } catch (error) {
       console.error('Failed to stop audio:', error);
@@ -166,17 +167,6 @@ class AudioService {
 
   getPosition() {
     return this.playbackStatus?.positionMillis || 0;
-  }
-
-  subscribe(callback) {
-    this.listeners.push(callback);
-    return () => {
-      this.listeners = this.listeners.filter(cb => cb !== callback);
-    };
-  }
-
-  notifyListeners(event, data) {
-    this.listeners.forEach(callback => callback(event, data));
   }
 
   // Convenience method to load and play immediately

@@ -1,3 +1,4 @@
+export { EventEmitter } from './base';
 export { locationService, LocationService } from './LocationService';
 export { claudeService, ClaudeService } from './ClaudeService';
 export { narrationService, NarrationService } from './NarrationService';
