@@ -214,7 +214,10 @@ export default function App() {
       )}
 
       {/* Narration Display */}
-      <ScrollView style={[styles.narrationContainer, mapExpanded && styles.narrationCollapsed]}>
+      <ScrollView
+        style={[styles.narrationContainer, mapExpanded && styles.narrationCollapsed]}
+        contentContainerStyle={styles.narrationContent}
+      >
         {isLoading && (
           <ActivityIndicator size="large" color="#00d4ff" style={styles.loader} />
         )}
@@ -313,7 +316,7 @@ const styles = StyleSheet.create({
   },
   narrationContainer: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#0d1e33',
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
@@ -321,6 +324,9 @@ const styles = StyleSheet.create({
   narrationCollapsed: {
     maxHeight: 100,
     flex: 0,
+  },
+  narrationContent: {
+    flexGrow: 1,
   },
   loader: {
     marginBottom: 15,
