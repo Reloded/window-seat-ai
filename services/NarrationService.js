@@ -22,10 +22,22 @@ class NarrationService {
     this.currentCheckpointIndex = 0;
     this.ensureCacheDir();
     this.initAudio();
+
+    // Queue state
+    this.queueActive = false;
+    this.queueIndex = 0;
+    this.queueListeners = [];
   }
 
   async initAudio() {
     await audioService.initialize();
+
+    // Listen for audio completion to advance queue
+    audioService.subscribe((event) => {
+      if (event === 'finished' && this.queueActive) {
+        this.playNextInQueue();
+      }
+    });
   }
 
   async ensureCacheDir() {
@@ -465,6 +477,99 @@ class NarrationService {
 
   hasAudioSupport() {
     return isApiKeyConfigured('elevenLabs');
+  }
+
+  // Queue playback methods
+  getQueueCheckpoints() {
+    if (!this.currentFlightPack?.checkpoints) return [];
+    return this.currentFlightPack.checkpoints.filter(c => c.audioPath || c.narration);
+  }
+
+  async startQueue(startIndex = 0) {
+    const checkpoints = this.getQueueCheckpoints();
+    if (checkpoints.length === 0) return false;
+
+    this.queueActive = true;
+    this.queueIndex = Math.max(0, Math.min(startIndex, checkpoints.length - 1));
+    this.notifyQueueListeners();
+
+    return await this.playCurrentQueueItem();
+  }
+
+  async playCurrentQueueItem() {
+    const checkpoints = this.getQueueCheckpoints();
+    if (!this.queueActive || this.queueIndex >= checkpoints.length) {
+      this.stopQueue();
+      return false;
+    }
+
+    const checkpoint = checkpoints[this.queueIndex];
+    this.notifyQueueListeners();
+
+    if (checkpoint.audioPath) {
+      return await audioService.playUri(checkpoint.audioPath);
+    }
+    return false;
+  }
+
+  async playNextInQueue() {
+    const checkpoints = this.getQueueCheckpoints();
+    if (this.queueIndex < checkpoints.length - 1) {
+      this.queueIndex++;
+      return await this.playCurrentQueueItem();
+    } else {
+      // End of queue
+      this.stopQueue();
+      return false;
+    }
+  }
+
+  async playPreviousInQueue() {
+    if (this.queueIndex > 0) {
+      this.queueIndex--;
+      return await this.playCurrentQueueItem();
+    }
+    return false;
+  }
+
+  async skipNext() {
+    await audioService.stop();
+    return await this.playNextInQueue();
+  }
+
+  async skipPrevious() {
+    await audioService.stop();
+    return await this.playPreviousInQueue();
+  }
+
+  stopQueue() {
+    this.queueActive = false;
+    audioService.stop();
+    this.notifyQueueListeners();
+  }
+
+  getQueueStatus() {
+    const checkpoints = this.getQueueCheckpoints();
+    const currentCheckpoint = checkpoints[this.queueIndex] || null;
+
+    return {
+      isActive: this.queueActive,
+      currentIndex: this.queueIndex,
+      totalCount: checkpoints.length,
+      currentCheckpoint,
+    };
+  }
+
+  subscribeToQueue(callback) {
+    this.queueListeners.push(callback);
+    return () => {
+      this.queueListeners = this.queueListeners.filter(cb => cb !== callback);
+    };
+  }
+
+  notifyQueueListeners() {
+    const status = this.getQueueStatus();
+    this.queueListeners.forEach(cb => cb(status));
   }
 }
 
