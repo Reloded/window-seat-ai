@@ -10,12 +10,13 @@ import {
   StatusBar,
   ActivityIndicator
 } from 'react-native';
-import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, FlightMap } from './components';
-import { useLocationTracking } from './hooks';
+import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, FlightMap, SettingsModal } from './components';
+import { useLocationTracking, useSettingsSync } from './hooks';
 import { narrationService } from './services';
 import { isApiKeyConfigured } from './config';
+import { SettingsProvider, useSettings } from './contexts';
 
-export default function App() {
+function AppContent() {
   const [narration, setNarration] = useState(
     "Enter your flight number and press 'Download Flight Pack' before takeoff, or press 'Scan Horizon' to identify your current location."
   );
@@ -27,6 +28,13 @@ export default function App() {
   const [checkpoints, setCheckpoints] = useState([]);
   const [mapExpanded, setMapExpanded] = useState(false);
   const [flightRoute, setFlightRoute] = useState([]);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+
+  // Sync settings to services
+  useSettingsSync();
+
+  // Get geofence radius from settings
+  const { settings } = useSettings();
 
   // Handle checkpoint triggers from geofenced locations
   const handleCheckpointEntered = useCallback(async (checkpoint) => {
@@ -48,7 +56,7 @@ export default function App() {
     stopTracking,
     resetTriggeredCheckpoints,
   } = useLocationTracking({
-    distanceInterval: 1000, // Update every 1km
+    distanceInterval: settings.gps.distanceInterval,
     onCheckpointEntered: handleCheckpointEntered,
     checkpoints,
   });
@@ -179,8 +187,16 @@ export default function App() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>WINDOW SEAT</Text>
-        <Text style={styles.subtitle}>AI Flight Narrator</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>WINDOW SEAT</Text>
+          <Text style={styles.subtitle}>AI Flight Narrator</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => setSettingsVisible(true)}
+        >
+          <Text style={styles.settingsIcon}>⚙</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Telemetry Bar */}
@@ -261,7 +277,21 @@ export default function App() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Settings Modal */}
+      <SettingsModal
+        visible={settingsVisible}
+        onClose={() => setSettingsVisible(false)}
+      />
     </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <SettingsProvider>
+      <AppContent />
+    </SettingsProvider>
   );
 }
 
@@ -272,9 +302,24 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 20,
     marginBottom: 20,
+  },
+  headerContent: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  settingsButton: {
+    position: 'absolute',
+    right: 0,
+    padding: 8,
+  },
+  settingsIcon: {
+    fontSize: 24,
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   title: {
     color: '#00d4ff',

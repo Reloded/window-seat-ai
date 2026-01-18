@@ -5,6 +5,21 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 class ClaudeService {
   constructor() {
     this.config = API_CONFIG.claude;
+    this.narrationPreferences = {
+      contentFocus: 'mixed', // geological, historical, cultural, mixed
+      length: 'medium',      // short, medium, long
+    };
+  }
+
+  updateNarrationPreferences(prefs) {
+    this.narrationPreferences = {
+      ...this.narrationPreferences,
+      ...prefs,
+    };
+  }
+
+  getNarrationPreferences() {
+    return { ...this.narrationPreferences };
   }
 
   isConfigured() {
@@ -57,6 +72,23 @@ class ClaudeService {
       ? `The observer is at approximately ${altitudeFeet.toLocaleString()} feet altitude.`
       : '';
 
+    // Build content focus instruction
+    const focusInstructions = {
+      geological: 'Focus primarily on geological features, rock formations, and natural landscape evolution.',
+      historical: 'Focus primarily on historical events, ancient sites, and human history of the region.',
+      cultural: 'Focus primarily on cultural landmarks, modern cities, and contemporary human activity.',
+      mixed: 'Include a balanced mix of geological, historical, and cultural information.',
+    };
+    const focusInstruction = focusInstructions[this.narrationPreferences.contentFocus] || focusInstructions.mixed;
+
+    // Build length instruction
+    const lengthInstructions = {
+      short: 'Write 1-2 sentences that take about 10 seconds to read aloud.',
+      medium: 'Write 2-3 sentences that take about 20 seconds to read aloud.',
+      long: 'Write 3-4 sentences that take about 30 seconds to read aloud.',
+    };
+    const lengthInstruction = lengthInstructions[this.narrationPreferences.length] || lengthInstructions.medium;
+
     return `You are a knowledgeable flight narrator for the "Window Seat" app. Generate an engaging, informative narration about what a passenger would see looking out their airplane window at these coordinates.
 
 Location: ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°
@@ -65,8 +97,8 @@ ${context.flightInfo ? `Flight: ${context.flightInfo}` : ''}
 ${context.checkpoint ? `Landmark: ${context.checkpoint.name}` : ''}
 
 Guidelines:
-- Write 2-3 sentences that would take about 15-20 seconds to read aloud
-- Focus on geological features, historical significance, or interesting facts about the terrain
+- ${lengthInstruction}
+- ${focusInstruction}
 - Be specific about what's visible (rivers, mountains, cities, coastlines)
 - Use vivid but concise language suitable for audio narration
 - Don't mention the coordinates directly - describe what's there

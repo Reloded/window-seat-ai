@@ -48,12 +48,32 @@ The app works without any API keys using demo data. Add keys for full functional
       FlightMap.js    # Interactive map with route and checkpoints
       CheckpointMarker.js # Custom SVG markers
       mapStyles.js    # Map styling constants
+    /settings         # Settings screen components
+      index.js        # Settings exports
+      SettingsModal.js    # Full-screen settings modal
+      SettingsSection.js  # Grouped settings section
+      SettingsRow.js      # Label + control row
+      SettingsSlider.js   # Slider control
+      SettingsToggle.js   # Switch control
+      SettingsPicker.js   # Dropdown picker
+      SettingsInput.js    # Text input for API keys
+      SettingsButton.js   # Action button
+      /sections           # Settings section components
+        VoiceAudioSection.js
+        NarrationSection.js
+        GPSSection.js
+        StorageSection.js
+        APISection.js
   /config           # Configuration
     index.js        # Config exports
     api.js          # API keys and settings
+  /contexts         # React contexts
+    index.js        # Context exports
+    SettingsContext.js  # Global settings state with AsyncStorage persistence
   /hooks            # Custom React hooks
     index.js        # Hook exports
     useLocationTracking.js  # GPS tracking hook with geofencing
+    useSettingsSync.js      # Syncs settings to services
   /services         # API integrations
     index.js        # Service exports
     LocationService.js  # GPS tracking service (singleton)
@@ -67,6 +87,7 @@ The app works without any API keys using demo data. Add keys for full functional
     geofence.js     # Distance calc, geofence checking
     conversions.js  # Unit conversions (m->ft, mps->kts, etc.)
     routeUtils.js   # Route-to-checkpoint conversion, ETA calc
+    formatBytes.js  # Format bytes for display
   /assets           # Static assets
   App.js            # Main application
   CLAUDE.md         # This file
@@ -82,9 +103,9 @@ The app works without any API keys using demo data. Add keys for full functional
 - [x] Build offline playback system (audio cached to expo-file-system)
 - [x] Add flight path pre-caching (FlightDataService with AeroAPI + great circle fallback)
 - [x] Map view showing current position and upcoming checkpoints (react-leaflet for web)
+- [x] Settings screen with voice, narration, GPS, storage, and API key configuration
 
 ## Future Enhancements
-- [ ] Settings screen for voice selection and playback preferences
 - [ ] Flight history and favorite routes
 - [ ] Share narrations with other passengers
 - [ ] Integration with Apple/Google Maps for landmark identification

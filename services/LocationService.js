@@ -7,6 +7,35 @@ class LocationService {
     this.currentLocation = null;
     this.isTracking = false;
     this.permissionGranted = false;
+    this.trackingOptions = {
+      accuracy: 'high',
+      distanceInterval: 1000,
+      timeInterval: 5000,
+    };
+  }
+
+  updateTrackingOptions(options) {
+    this.trackingOptions = {
+      ...this.trackingOptions,
+      ...options,
+    };
+  }
+
+  getTrackingOptions() {
+    return { ...this.trackingOptions };
+  }
+
+  getLocationAccuracy(accuracy) {
+    switch (accuracy) {
+      case 'high':
+        return Location.Accuracy.High;
+      case 'balanced':
+        return Location.Accuracy.Balanced;
+      case 'low':
+        return Location.Accuracy.Low;
+      default:
+        return Location.Accuracy.High;
+    }
   }
 
   async requestPermissions() {
@@ -43,10 +72,13 @@ class LocationService {
       }
     }
 
+    // Merge stored settings with provided options
+    const mergedOptions = { ...this.trackingOptions, ...options };
+
     const trackingOptions = {
-      accuracy: Location.Accuracy.High,
-      distanceInterval: options.distanceInterval || 500, // meters
-      timeInterval: options.timeInterval || 5000, // ms
+      accuracy: this.getLocationAccuracy(mergedOptions.accuracy),
+      distanceInterval: mergedOptions.distanceInterval || 500, // meters
+      timeInterval: mergedOptions.timeInterval || 5000, // ms
     };
 
     this.watchSubscription = await Location.watchPositionAsync(

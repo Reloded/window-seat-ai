@@ -14,7 +14,24 @@ if (Platform.OS !== 'web') {
 class ElevenLabsService {
   constructor() {
     this.config = API_CONFIG.elevenLabs;
+    this.voiceSettings = {
+      voiceId: this.config.voiceId,
+      stability: 0.5,
+      similarityBoost: 0.75,
+      useSpeakerBoost: true,
+    };
     this.ensureCacheDir();
+  }
+
+  updateVoiceSettings(settings) {
+    this.voiceSettings = {
+      ...this.voiceSettings,
+      ...settings,
+    };
+  }
+
+  getVoiceSettings() {
+    return { ...this.voiceSettings };
   }
 
   async ensureCacheDir() {
@@ -53,7 +70,9 @@ class ElevenLabsService {
       throw new Error('ElevenLabs API key not configured');
     }
 
-    const voiceId = options.voiceId || this.config.voiceId;
+    // Merge stored settings with provided options
+    const mergedOptions = { ...this.voiceSettings, ...options };
+    const voiceId = mergedOptions.voiceId || this.config.voiceId;
 
     const response = await fetch(
       `${ELEVENLABS_API_URL}/text-to-speech/${voiceId}`,
@@ -65,12 +84,12 @@ class ElevenLabsService {
         },
         body: JSON.stringify({
           text,
-          model_id: options.modelId || 'eleven_monolingual_v1',
+          model_id: mergedOptions.modelId || 'eleven_monolingual_v1',
           voice_settings: {
-            stability: options.stability || 0.5,
-            similarity_boost: options.similarityBoost || 0.75,
-            style: options.style || 0.0,
-            use_speaker_boost: options.useSpeakerBoost ?? true,
+            stability: mergedOptions.stability ?? 0.5,
+            similarity_boost: mergedOptions.similarityBoost ?? 0.75,
+            style: mergedOptions.style || 0.0,
+            use_speaker_boost: mergedOptions.useSpeakerBoost ?? true,
           },
         }),
       }

@@ -8,6 +8,15 @@ class AudioService {
     this.currentUri = null;
     this.listeners = [];
     this.playbackStatus = null;
+    this.defaultVolume = 0.8;
+  }
+
+  setDefaultVolume(volume) {
+    this.defaultVolume = Math.max(0, Math.min(1, volume));
+  }
+
+  getDefaultVolume() {
+    return this.defaultVolume;
   }
 
   async initialize() {
@@ -28,7 +37,7 @@ class AudioService {
     try {
       const { sound } = await Audio.Sound.createAsync(
         { uri },
-        { shouldPlay: false },
+        { shouldPlay: false, volume: this.defaultVolume },
         this.onPlaybackStatusUpdate.bind(this)
       );
 

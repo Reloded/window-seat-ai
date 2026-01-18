@@ -215,6 +215,20 @@ class NarrationService {
     await FileSystem.deleteAsync(filePath, { idempotent: true });
   }
 
+  async clearAllFlightPacks() {
+    this.flightPacks.clear();
+    this.currentFlightPack = null;
+
+    // On web, only clear memory
+    if (Platform.OS === 'web' || !FileSystem) return;
+
+    const dirInfo = await FileSystem.getInfoAsync(NARRATION_CACHE_DIR);
+    if (dirInfo.exists) {
+      await FileSystem.deleteAsync(NARRATION_CACHE_DIR, { idempotent: true });
+      await this.ensureCacheDir();
+    }
+  }
+
   setCurrentFlightPack(pack) {
     this.currentFlightPack = pack;
   }
