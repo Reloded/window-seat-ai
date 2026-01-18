@@ -10,7 +10,7 @@ import {
   StatusBar,
   ActivityIndicator
 } from 'react-native';
-import { TelemetryDisplay, StatusIndicator, AudioPlayerControls } from './components';
+import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, FlightMap } from './components';
 import { useLocationTracking } from './hooks';
 import { narrationService } from './services';
 import { isApiKeyConfigured } from './config';
@@ -25,6 +25,8 @@ export default function App() {
   const [downloadProgress, setDownloadProgress] = useState(null);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [checkpoints, setCheckpoints] = useState([]);
+  const [mapExpanded, setMapExpanded] = useState(false);
+  const [flightRoute, setFlightRoute] = useState([]);
 
   // Handle checkpoint triggers from geofenced locations
   const handleCheckpointEntered = useCallback(async (checkpoint) => {
@@ -40,6 +42,7 @@ export default function App() {
     location,
     isTracking,
     error,
+    triggeredCheckpoints,
     getCurrentPosition,
     startTracking,
     stopTracking,
@@ -115,6 +118,7 @@ export default function App() {
 
       narrationService.setCurrentFlightPack(pack);
       setCheckpoints(pack.checkpoints || []);
+      setFlightRoute(pack.route || []);
       resetTriggeredCheckpoints(); // Clear any previously triggered checkpoints
       setFlightPackReady(true);
       setDownloadProgress(null);
@@ -197,8 +201,20 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
+      {/* Map View */}
+      {flightPackReady && (
+        <FlightMap
+          route={flightRoute}
+          checkpoints={checkpoints}
+          location={location}
+          triggeredCheckpoints={triggeredCheckpoints}
+          isExpanded={mapExpanded}
+          onToggleExpand={() => setMapExpanded(!mapExpanded)}
+        />
+      )}
+
       {/* Narration Display */}
-      <ScrollView style={styles.narrationContainer}>
+      <ScrollView style={[styles.narrationContainer, mapExpanded && styles.narrationCollapsed]}>
         {isLoading && (
           <ActivityIndicator size="large" color="#00d4ff" style={styles.loader} />
         )}
@@ -301,6 +317,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
+  },
+  narrationCollapsed: {
+    maxHeight: 100,
+    flex: 0,
   },
   loader: {
     marginBottom: 15,

@@ -7,6 +7,7 @@ export function useLocationTracking(options = {}) {
   const [isTracking, setIsTracking] = useState(false);
   const [error, setError] = useState(null);
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const [triggeredCheckpoints, setTriggeredCheckpoints] = useState(new Set());
 
   const triggeredCheckpointsRef = useRef(new Set());
   const checkpointsRef = useRef(options.checkpoints || []);
@@ -48,6 +49,7 @@ export function useLocationTracking(options = {}) {
 
         newlyTriggered.forEach(checkpoint => {
           triggeredCheckpointsRef.current.add(checkpoint.id);
+          setTriggeredCheckpoints(new Set(triggeredCheckpointsRef.current));
           options.onCheckpointEntered(checkpoint);
         });
       }
@@ -89,6 +91,7 @@ export function useLocationTracking(options = {}) {
 
   const resetTriggeredCheckpoints = useCallback(() => {
     triggeredCheckpointsRef.current.clear();
+    setTriggeredCheckpoints(new Set());
   }, []);
 
   return {
@@ -96,6 +99,7 @@ export function useLocationTracking(options = {}) {
     isTracking,
     error,
     permissionGranted,
+    triggeredCheckpoints,
     getCurrentPosition,
     startTracking,
     stopTracking,
