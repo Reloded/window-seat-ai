@@ -44,6 +44,7 @@ The app works without any API keys using demo data. Add keys for full functional
     TelemetryDisplay.js  # GPS telemetry bar
     StatusIndicator.js   # Tracking status indicator
     AudioPlayerControls.js # Audio playback controls
+    NextCheckpointDisplay.js # Distance/ETA to next checkpoint
     /map              # Map view components
       index.js        # Map component exports
       FlightMap.js    # Interactive map with route and checkpoints

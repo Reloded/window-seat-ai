@@ -10,7 +10,7 @@ import {
   StatusBar,
   ActivityIndicator
 } from 'react-native';
-import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, FlightMap, SettingsModal, FlightHistoryModal } from './components';
+import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightMap, SettingsModal, FlightHistoryModal } from './components';
 import { useLocationTracking, useSettingsSync } from './hooks';
 import { narrationService } from './services';
 import { isApiKeyConfigured } from './config';
@@ -228,6 +228,16 @@ function AppContent() {
       {/* Telemetry Bar */}
       <TelemetryDisplay location={location} style={styles.telemetry} />
 
+      {/* Next Checkpoint Display */}
+      {flightPackReady && checkpoints.length > 0 && (
+        <NextCheckpointDisplay
+          location={location}
+          checkpoints={checkpoints}
+          triggeredCheckpoints={triggeredCheckpoints}
+          style={styles.nextCheckpoint}
+        />
+      )}
+
       {/* Flight Number Input */}
       <View style={styles.inputContainer}>
         <TextInput
@@ -377,7 +387,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   telemetry: {
-    marginBottom: 20,
+    marginBottom: 10,
+  },
+  nextCheckpoint: {
+    marginBottom: 10,
   },
   inputContainer: {
     flexDirection: 'row',
