@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { VoiceAudioSection } from './sections/VoiceAudioSection';
 import { NarrationSection } from './sections/NarrationSection';
 import { GPSSection } from './sections/GPSSection';

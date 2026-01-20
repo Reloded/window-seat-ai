@@ -1,19 +1,24 @@
-import { Audio } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { EventEmitter } from './base';
 
 class AudioService extends EventEmitter {
   constructor() {
     super();
-    this.sound = null;
+    this.player = null;
     this.isPlaying = false;
     this.isPaused = false;
     this.currentUri = null;
     this.playbackStatus = null;
     this.defaultVolume = 0.8;
+    this.statusSubscription = null;
+    this.wasPlaying = false;
   }
 
   setDefaultVolume(volume) {
     this.defaultVolume = Math.max(0, Math.min(1, volume));
+    if (this.player) {
+      this.player.volume = this.defaultVolume;
+    }
   }
 
   getDefaultVolume() {
@@ -22,28 +27,28 @@ class AudioService extends EventEmitter {
 
   async initialize() {
     // Configure audio mode for background playback
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      staysActiveInBackground: true,
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: true,
-      playThroughEarpieceAndroid: false,
+    await setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      interruptionMode: 'duckOthers',
     });
   }
 
   async loadAudio(uri) {
-    // Unload any existing sound
+    // Unload any existing player
     await this.unload();
 
     try {
-      const { sound } = await Audio.Sound.createAsync(
-        { uri },
-        { shouldPlay: false, volume: this.defaultVolume },
-        this.onPlaybackStatusUpdate.bind(this)
-      );
-
-      this.sound = sound;
+      // Create a new player with the audio source
+      this.player = createAudioPlayer({ uri });
+      this.player.volume = this.defaultVolume;
       this.currentUri = uri;
+
+      // Subscribe to status updates
+      this.statusSubscription = this.player.addListener('playbackStatusUpdate', (status) => {
+        this.onPlaybackStatusUpdate(status);
+      });
+
       return true;
     } catch (error) {
       console.error('Failed to load audio:', error);
@@ -52,27 +57,37 @@ class AudioService extends EventEmitter {
   }
 
   onPlaybackStatusUpdate(status) {
-    this.playbackStatus = status;
+    const currentTime = status.currentTime || 0;
+    const duration = status.duration || 0;
+    const playing = status.playing || false;
 
-    if (status.isLoaded) {
-      this.isPlaying = status.isPlaying;
-      this.isPaused = !status.isPlaying && status.positionMillis > 0;
+    // Convert to legacy format for compatibility
+    this.playbackStatus = {
+      isLoaded: true,
+      isPlaying: playing,
+      positionMillis: currentTime * 1000,
+      durationMillis: duration * 1000,
+      didJustFinish: this.wasPlaying && !playing && currentTime >= duration - 0.1 && duration > 0,
+    };
 
-      if (status.didJustFinish) {
-        this.isPlaying = false;
-        this.isPaused = false;
-        this.emit('finished');
-      }
+    this.isPlaying = playing;
+    this.isPaused = !playing && currentTime > 0;
+
+    if (this.playbackStatus.didJustFinish) {
+      this.isPlaying = false;
+      this.isPaused = false;
+      this.emit('finished');
     }
 
-    this.emit('statusUpdate', status);
+    this.wasPlaying = playing;
+    this.emit('statusUpdate', this.playbackStatus);
   }
 
   async play() {
-    if (!this.sound) return false;
+    if (!this.player) return false;
 
     try {
-      await this.sound.playAsync();
+      this.player.play();
       this.isPlaying = true;
       this.isPaused = false;
       this.emit('playing');
@@ -84,10 +99,10 @@ class AudioService extends EventEmitter {
   }
 
   async pause() {
-    if (!this.sound) return false;
+    if (!this.player) return false;
 
     try {
-      await this.sound.pauseAsync();
+      this.player.pause();
       this.isPlaying = false;
       this.isPaused = true;
       this.emit('paused');
@@ -99,11 +114,11 @@ class AudioService extends EventEmitter {
   }
 
   async stop() {
-    if (!this.sound) return false;
+    if (!this.player) return false;
 
     try {
-      await this.sound.stopAsync();
-      await this.sound.setPositionAsync(0);
+      this.player.pause();
+      this.player.seekTo(0);
       this.isPlaying = false;
       this.isPaused = false;
       this.emit('stopped');
@@ -115,24 +130,29 @@ class AudioService extends EventEmitter {
   }
 
   async unload() {
-    if (this.sound) {
+    if (this.statusSubscription) {
+      this.statusSubscription.remove();
+      this.statusSubscription = null;
+    }
+    if (this.player) {
       try {
-        await this.sound.unloadAsync();
+        this.player.remove();
       } catch (error) {
         console.error('Failed to unload audio:', error);
       }
-      this.sound = null;
+      this.player = null;
       this.currentUri = null;
       this.isPlaying = false;
       this.isPaused = false;
+      this.wasPlaying = false;
     }
   }
 
   async setVolume(volume) {
-    if (!this.sound) return false;
+    if (!this.player) return false;
 
     try {
-      await this.sound.setVolumeAsync(Math.max(0, Math.min(1, volume)));
+      this.player.volume = Math.max(0, Math.min(1, volume));
       return true;
     } catch (error) {
       console.error('Failed to set volume:', error);
@@ -141,10 +161,11 @@ class AudioService extends EventEmitter {
   }
 
   async seekTo(positionMillis) {
-    if (!this.sound) return false;
+    if (!this.player) return false;
 
     try {
-      await this.sound.setPositionAsync(positionMillis);
+      // expo-audio uses seconds, not milliseconds
+      this.player.seekTo(positionMillis / 1000);
       return true;
     } catch (error) {
       console.error('Failed to seek:', error);

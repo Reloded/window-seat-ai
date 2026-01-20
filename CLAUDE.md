@@ -17,8 +17,9 @@ Mobile app that narrates what you're flying over during flights. Pre-caches AI-g
 | Voice Synthesis | ElevenLabs API |
 | Offline Storage | expo-file-system |
 | GPS Tracking | expo-location |
-| Audio Playback | expo-av |
+| Audio Playback | expo-audio |
 | Map (Web) | react-leaflet / Leaflet |
+| Map (Native) | react-native-maps |
 | Landmark Data | OpenStreetMap (Nominatim + Overpass) |
 
 ## Core Features
@@ -52,7 +53,7 @@ The app works without any API keys using demo data. Add keys for full functional
     BorderCrossingAlert.js # Shows alerts when crossing country/state borders
     /map              # Map view components (platform-specific)
       index.js        # Map component exports
-      FlightMap.js    # Native placeholder (map not available on mobile)
+      FlightMap.js    # Native map with react-native-maps
       FlightMap.web.js    # Web map with react-leaflet
       CheckpointMarker.js # Native stub for markers
       CheckpointMarker.web.js # Web SVG markers using Leaflet
@@ -96,7 +97,7 @@ The app works without any API keys using demo data. Add keys for full functional
     ClaudeService.js    # Claude API for narration generation
     NarrationService.js # Manages narration caching & playback
     ElevenLabsService.js # Text-to-speech API integration
-    AudioService.js     # Audio playback management (expo-av)
+    AudioService.js     # Audio playback management (expo-audio)
     FlightDataService.js # Flight route data (AeroAPI)
     ShareService.js     # Share narrations via native share sheet or file download
     LandmarkService.js  # Reverse geocoding & POI lookup (OpenStreetMap)
@@ -104,7 +105,7 @@ The app works without any API keys using demo data. Add keys for full functional
     BorderCrossingService.js # Detects country/state border crossings
   /utils            # Helper functions
     index.js        # Utility exports
-    geofence.js     # Distance calc, geofence checking
+    geofence.ts     # Distance calc, geofence checking (TypeScript)
     conversions.js  # Unit conversions (m->ft, mps->kts, etc.)
     routeUtils.js   # Route-to-checkpoint conversion, ETA calc
     formatBytes.js  # Format bytes for display
@@ -131,10 +132,8 @@ The app works without any API keys using demo data. Add keys for full functional
 - [x] Sunrise/sunset tracker with golden hour alerts and viewing side recommendations
 - [x] Country/state border crossing alerts with flag display
 - [x] Mobile UI improvements (scrollable content, inline expandable sections)
-- [x] Platform-specific map components (web uses react-leaflet, native shows placeholder)
-
-## Future Enhancements
-- [ ] Native map support using react-native-maps for iOS/Android
+- [x] Platform-specific map components (web uses react-leaflet, native uses react-native-maps)
+- [x] Native map support with route, checkpoints, geofence circles, and user location
 
 ## Commands
 ```bash
@@ -142,6 +141,8 @@ npm start          # Start Expo dev server
 npm run android    # Run on Android
 npm run ios        # Run on iOS (Mac only)
 npm run web        # Run in browser
+npm test           # Run unit tests
+npm run typecheck  # TypeScript type checking
 ```
 
 ## Testing on Mobile
@@ -150,7 +151,7 @@ npm run web        # Run in browser
 3. Scan the QR code with your phone camera (iOS) or Expo Go app (Android)
 4. For remote testing, use `npx expo start --tunnel`
 
-**Note:** Map view is only available on web. On mobile, GPS tracking and all other features work normally.
+**Note:** Map view uses react-native-maps on iOS/Android and react-leaflet on web.
 
 ## API Key Configuration
 Set environment variables or edit `config/api.js`:

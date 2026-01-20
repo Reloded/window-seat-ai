@@ -5,11 +5,11 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Alert,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlightHistoryTabs } from './FlightHistoryTabs';
 import { FlightHistoryList } from './FlightHistoryList';
 import { useFlightHistory } from '../../contexts';

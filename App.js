@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator
 } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, SunTrackerDisplay, BorderCrossingAlert, FlightMap, SettingsModal, FlightHistoryModal } from './components';
 import { useLocationTracking, useSettingsSync } from './hooks';
 import { narrationService } from './services';
@@ -396,11 +396,13 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SettingsProvider>
-      <FlightHistoryProvider>
-        <AppContent />
-      </FlightHistoryProvider>
-    </SettingsProvider>
+    <SafeAreaProvider>
+      <SettingsProvider>
+        <FlightHistoryProvider>
+          <AppContent />
+        </FlightHistoryProvider>
+      </SettingsProvider>
+    </SafeAreaProvider>
   );
 }
 
