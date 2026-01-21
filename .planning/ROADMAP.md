@@ -22,7 +22,7 @@
 **Goal:** Better user feedback and error handling
 
 - [x] Better error messages for users (ErrorBanner component)
-- [ ] Loading skeletons during narration generation
+- [x] Loading skeletons during narration generation (LoadingSkeleton components)
 - [ ] Retry logic for flaky API calls
 - [ ] Accessibility (a11y) improvements
 

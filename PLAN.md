@@ -33,9 +33,9 @@
 - [x] Shows route, checkpoints with geofence circles, and user location
 - [x] Platform-specific: web uses react-leaflet, native uses react-native-maps
 
-## Phase 3: UX Improvements ← NEXT
-- [ ] Better error messages for users
-- [ ] Loading skeletons during narration generation
+## Phase 3: UX Improvements ← IN PROGRESS
+- [x] Better error messages for users
+- [x] Loading skeletons during narration generation
 - [ ] Retry logic for flaky API calls
 - [ ] Accessibility (a11y) improvements
 

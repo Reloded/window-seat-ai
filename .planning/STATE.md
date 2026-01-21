@@ -7,14 +7,14 @@
 ## Current Position
 - **Milestone:** 1 (MVP Polish)
 - **Phase:** 3 of 4 (UX Improvements)
-- **Task:** 2 of 4 (Loading skeletons)
+- **Task:** 3 of 4 (Retry logic)
 - **Status:** In Progress
 
 ## Progress
 ```
 Phase 1: [████████████] Complete
 Phase 2: [████████████] Complete
-Phase 3: [███░░░░░░░░░] 1/4 tasks
+Phase 3: [██████░░░░░░] 2/4 tasks
 Phase 4: [░░░░░░░░░░░░] Not started
 ```
 
@@ -28,7 +28,7 @@ None currently.
 
 ## Session Continuity
 - **Last session:** 2026-01-21
-- **Last commit:** ed36e4a - Add user-friendly error messages and ErrorBanner component
+- **Last commit:** 4e9ca94 - Add loading skeletons for improved UX
 - **Resume file:** `.planning/phases/03-ux-improvements/.continue-here.md`
 
 ## Pending Todos
@@ -40,5 +40,6 @@ None currently.
 - `services/FlightDataService.js` - Added error messages
 - `hooks/useLocationTracking.js` - Error subscription
 - `components/ErrorBanner.js` - New component
-- `components/index.js` - Export ErrorBanner
-- `App.js` - Integrate ErrorBanner
+- `components/LoadingSkeleton.js` - New skeleton components
+- `components/index.js` - Export new components
+- `App.js` - Integrate ErrorBanner and skeletons
