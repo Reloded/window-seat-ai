@@ -26,13 +26,13 @@
 - [x] Retry logic for flaky API calls (withRetry utility)
 - [x] Accessibility (a11y) improvements (screen reader support, roles, live regions)
 
-### Phase 4: New Features
+### Phase 4: New Features - COMPLETE
 **Goal:** Enhanced discovery and personalization
 
-- [ ] Flight search/browse instead of typing numbers
-- [ ] Route preview before downloading
-- [ ] Dark/light mode toggle
-- [ ] Multi-language narrations
+- [x] Flight search/browse instead of typing numbers
+- [x] Route preview before downloading
+- [x] Dark/light mode toggle
+- [x] Multi-language narrations
 
 ---
 
