@@ -23,7 +23,7 @@
 
 - [x] Better error messages for users (ErrorBanner component)
 - [x] Loading skeletons during narration generation (LoadingSkeleton components)
-- [ ] Retry logic for flaky API calls
+- [x] Retry logic for flaky API calls (withRetry utility)
 - [ ] Accessibility (a11y) improvements
 
 ### Phase 4: New Features

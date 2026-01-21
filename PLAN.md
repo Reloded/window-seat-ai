@@ -36,7 +36,7 @@
 ## Phase 3: UX Improvements ← IN PROGRESS
 - [x] Better error messages for users
 - [x] Loading skeletons during narration generation
-- [ ] Retry logic for flaky API calls
+- [x] Retry logic for flaky API calls
 - [ ] Accessibility (a11y) improvements
 
 ## Phase 4: New Features (Optional)
