@@ -1,4 +1,5 @@
 import { API_CONFIG, isApiKeyConfigured } from '../config/api';
+import { withRetry, isRetryableStatus } from '../utils/retry';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
@@ -65,46 +66,77 @@ class ClaudeService {
     const prompt = this.buildNarrationPrompt(latitude, longitude, altitude, context);
 
     try {
-      const response = await fetch(ANTHROPIC_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.config.apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: this.config.model,
-          max_tokens: this.config.maxTokens,
-          messages: [
-            {
-              role: 'user',
-              content: prompt,
+      const data = await withRetry(
+        async (attempt) => {
+          if (attempt > 0) {
+            console.log(`ClaudeService: Retry attempt ${attempt} for narration`);
+          }
+
+          const response = await fetch(ANTHROPIC_API_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': this.config.apiKey,
+              'anthropic-version': '2023-06-01',
             },
-          ],
-        }),
-      });
+            body: JSON.stringify({
+              model: this.config.model,
+              max_tokens: this.config.maxTokens,
+              messages: [
+                {
+                  role: 'user',
+                  content: prompt,
+                },
+              ],
+            }),
+          });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error?.message || '';
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.error?.message || '';
+            const error = new Error(errorMessage || `HTTP ${response.status}`);
+            error.status = response.status;
+            error.errorData = errorData;
 
-        if (response.status === 401) {
-          this._setError('INVALID_KEY', errorMessage);
-        } else if (response.status === 429) {
-          this._setError('RATE_LIMITED', errorMessage);
-        } else if (response.status >= 500) {
-          this._setError('SERVER_ERROR', errorMessage);
-        } else {
-          this._setError('UNKNOWN', errorMessage);
+            // Don't retry auth errors
+            if (response.status === 401) {
+              error.noRetry = true;
+            }
+
+            throw error;
+          }
+
+          return response.json();
+        },
+        {
+          maxRetries: 3,
+          initialDelayMs: 1000,
+          shouldRetry: (error) => {
+            // Don't retry auth errors
+            if (error.noRetry) return false;
+            // Retry rate limits and server errors
+            if (error.status && isRetryableStatus(error.status)) return true;
+            // Retry network errors
+            if (error.name === 'TypeError') return true;
+            return false;
+          },
+          onRetry: ({ attempt, delay, error }) => {
+            console.log(`ClaudeService: Will retry in ${delay}ms (attempt ${attempt}, error: ${error.message})`);
+          },
         }
-        return null;
-      }
+      );
 
-      const data = await response.json();
       this.clearError();
       return data.content[0].text;
     } catch (error) {
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      // Set appropriate error based on final failure
+      if (error.status === 401) {
+        this._setError('INVALID_KEY', error.message);
+      } else if (error.status === 429) {
+        this._setError('RATE_LIMITED', error.message);
+      } else if (error.status >= 500) {
+        this._setError('SERVER_ERROR', error.message);
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
         this._setError('NETWORK_ERROR', error.message);
       } else {
         this._setError('UNKNOWN', error.message);

@@ -1,4 +1,5 @@
 import { API_CONFIG, isApiKeyConfigured } from '../config/api';
+import { withRetry, isRetryableStatus } from '../utils/retry';
 
 const AEROAPI_BASE_URL = 'https://aeroapi.flightaware.com/aeroapi';
 
@@ -118,33 +119,59 @@ class FlightDataService {
 
   async aeroAPIRequest(endpoint) {
     try {
-      const response = await fetch(`${AEROAPI_BASE_URL}${endpoint}`, {
-        headers: {
-          'x-apikey': this.config.apiKey,
+      return await withRetry(
+        async (attempt) => {
+          if (attempt > 0) {
+            console.log(`FlightDataService: Retry attempt ${attempt} for ${endpoint}`);
+          }
+
+          const response = await fetch(`${AEROAPI_BASE_URL}${endpoint}`, {
+            headers: {
+              'x-apikey': this.config.apiKey,
+            },
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.detail || `Status ${response.status}`;
+            const error = new Error(errorMessage);
+            error.status = response.status;
+
+            // Don't retry auth or not found errors
+            if (response.status === 401 || response.status === 404) {
+              error.noRetry = true;
+            }
+
+            throw error;
+          }
+
+          return response.json();
         },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.detail || `Status ${response.status}`;
-
-        if (response.status === 401) {
-          this._setError('INVALID_KEY', errorMessage);
-        } else if (response.status === 404) {
-          this._setError('FLIGHT_NOT_FOUND', errorMessage);
-        } else if (response.status === 429) {
-          this._setError('RATE_LIMITED', errorMessage);
-        } else if (response.status >= 500) {
-          this._setError('SERVER_ERROR', errorMessage);
-        } else {
-          this._setError('UNKNOWN', errorMessage);
+        {
+          maxRetries: 3,
+          initialDelayMs: 1000,
+          shouldRetry: (error) => {
+            if (error.noRetry) return false;
+            if (error.status && isRetryableStatus(error.status)) return true;
+            if (error.name === 'TypeError') return true;
+            return false;
+          },
+          onRetry: ({ attempt, delay, error }) => {
+            console.log(`FlightDataService: Will retry in ${delay}ms (attempt ${attempt}, error: ${error.message})`);
+          },
         }
-        throw new Error(errorMessage);
-      }
-
-      return response.json();
+      );
     } catch (error) {
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      // Set appropriate error based on final failure
+      if (error.status === 401) {
+        this._setError('INVALID_KEY', error.message);
+      } else if (error.status === 404) {
+        this._setError('FLIGHT_NOT_FOUND', error.message);
+      } else if (error.status === 429) {
+        this._setError('RATE_LIMITED', error.message);
+      } else if (error.status >= 500) {
+        this._setError('SERVER_ERROR', error.message);
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
         this._setError('NETWORK_ERROR', error.message);
       } else if (!this.lastError) {
         this._setError('UNKNOWN', error.message);

@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { API_CONFIG, isApiKeyConfigured } from '../config/api';
+import { withRetry, isRetryableStatus } from '../utils/retry';
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 
@@ -74,34 +75,60 @@ class ElevenLabsService {
     const mergedOptions = { ...this.voiceSettings, ...options };
     const voiceId = mergedOptions.voiceId || this.config.voiceId;
 
-    const response = await fetch(
-      `${ELEVENLABS_API_URL}/text-to-speech/${voiceId}`,
+    return withRetry(
+      async (attempt) => {
+        if (attempt > 0) {
+          console.log(`ElevenLabsService: Retry attempt ${attempt} for speech generation`);
+        }
+
+        const response = await fetch(
+          `${ELEVENLABS_API_URL}/text-to-speech/${voiceId}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'xi-api-key': this.config.apiKey,
+            },
+            body: JSON.stringify({
+              text,
+              model_id: mergedOptions.modelId || 'eleven_monolingual_v1',
+              voice_settings: {
+                stability: mergedOptions.stability ?? 0.5,
+                similarity_boost: mergedOptions.similarityBoost ?? 0.75,
+                style: mergedOptions.style || 0.0,
+                use_speaker_boost: mergedOptions.useSpeakerBoost ?? true,
+              },
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const error = new Error(errorData.detail?.message || 'Failed to generate speech');
+          error.status = response.status;
+          // Don't retry auth errors
+          if (response.status === 401) {
+            error.noRetry = true;
+          }
+          throw error;
+        }
+
+        return response.blob();
+      },
       {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'xi-api-key': this.config.apiKey,
+        maxRetries: 3,
+        initialDelayMs: 1000,
+        shouldRetry: (error) => {
+          if (error.noRetry) return false;
+          if (error.status && isRetryableStatus(error.status)) return true;
+          if (error.name === 'TypeError') return true;
+          return false;
         },
-        body: JSON.stringify({
-          text,
-          model_id: mergedOptions.modelId || 'eleven_monolingual_v1',
-          voice_settings: {
-            stability: mergedOptions.stability ?? 0.5,
-            similarity_boost: mergedOptions.similarityBoost ?? 0.75,
-            style: mergedOptions.style || 0.0,
-            use_speaker_boost: mergedOptions.useSpeakerBoost ?? true,
-          },
-        }),
+        onRetry: ({ attempt, delay, error }) => {
+          console.log(`ElevenLabsService: Will retry in ${delay}ms (attempt ${attempt}, error: ${error.message})`);
+        },
       }
     );
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.detail?.message || 'Failed to generate speech');
-    }
-
-    // Return the audio blob
-    return await response.blob();
   }
 
   async generateAndSaveAudio(text, filename, options = {}) {
