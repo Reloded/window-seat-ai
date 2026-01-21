@@ -1,8 +1,9 @@
 # Window Seat AI - Development Plan
 
 ## Current State
-**Status:** MVP Feature Complete
-**Date:** January 2026
+**Status:** Phase 2 Complete
+**Date:** January 20, 2026
+**Last Commit:** 0152648 - Add native map support, TypeScript, and fix deprecations
 
 ### Working Features
 - 11 services (Location, Claude, ElevenLabs, Audio, FlightData, Landmark, Sun, Border, Share, etc.)
@@ -12,11 +13,11 @@
 - Sun tracker, border alerts, window side advisor
 - Demo flights work without API keys
 
-### Known Gaps
-- Native map support (mobile shows placeholder)
-- No TypeScript
-- No test coverage
-- Deprecation warnings (expo-av, SafeAreaView)
+### Recent Improvements (Phase 1 & 2)
+- Native map support on iOS/Android (react-native-maps)
+- TypeScript configured with geofence.ts converted
+- 29 unit tests for geofence utilities
+- Fixed expo-av → expo-audio, SafeAreaView deprecations
 
 ---
 
@@ -32,7 +33,7 @@
 - [x] Shows route, checkpoints with geofence circles, and user location
 - [x] Platform-specific: web uses react-leaflet, native uses react-native-maps
 
-## Phase 3: UX Improvements
+## Phase 3: UX Improvements ← NEXT
 - [ ] Better error messages for users
 - [ ] Loading skeletons during narration generation
 - [ ] Retry logic for flaky API calls
