@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { VoiceAudioSection } from './sections/VoiceAudioSection';
 import { NarrationSection } from './sections/NarrationSection';
 import { GPSSection } from './sections/GPSSection';
+import { DisplaySection } from './sections/DisplaySection';
 import { StorageSection } from './sections/StorageSection';
 import { APISection } from './sections/APISection';
 
@@ -41,6 +42,7 @@ export function SettingsModal({ visible, onClose }) {
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
+          <DisplaySection />
           <VoiceAudioSection />
           <NarrationSection />
           <GPSSection />

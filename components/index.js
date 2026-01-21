@@ -9,6 +9,8 @@ export { SunTrackerDisplay } from './SunTrackerDisplay';
 export { BorderCrossingAlert } from './BorderCrossingAlert';
 export { ErrorBanner } from './ErrorBanner';
 export { LoadingSkeleton, TextSkeleton, NarrationSkeleton, CheckpointListSkeleton, FlightPackSkeleton } from './LoadingSkeleton';
+export { FlightSearch } from './FlightSearch';
+export { RoutePreview } from './RoutePreview';
 export { FlightMap } from './map';
 export { SettingsModal } from './settings';
 export { FlightHistoryModal } from './history';

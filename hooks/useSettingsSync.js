@@ -53,4 +53,13 @@ export function useSettingsSync() {
       length: settings.narration.length,
     });
   }, [isLoaded, settings.narration.contentFocus, settings.narration.length]);
+
+  // Sync language to Claude service
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    claudeService.updateNarrationPreferences({
+      language: settings.display?.language || 'en',
+    });
+  }, [isLoaded, settings.display?.language]);
 }

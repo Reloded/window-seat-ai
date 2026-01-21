@@ -9,8 +9,8 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, SunTrackerDisplay, BorderCrossingAlert, ErrorBanner, NarrationSkeleton, CheckpointListSkeleton, FlightMap, SettingsModal, FlightHistoryModal } from './components';
-import { useLocationTracking, useSettingsSync } from './hooks';
+import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, SunTrackerDisplay, BorderCrossingAlert, ErrorBanner, NarrationSkeleton, CheckpointListSkeleton, FlightSearch, RoutePreview, FlightMap, SettingsModal, FlightHistoryModal } from './components';
+import { useLocationTracking, useSettingsSync, useTheme } from './hooks';
 import { narrationService } from './services';
 import { isApiKeyConfigured } from './config';
 import { SettingsProvider, useSettings, FlightHistoryProvider, useFlightHistory } from './contexts';
@@ -31,9 +31,15 @@ function AppContent() {
   const [flightDestination, setFlightDestination] = useState(null);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [recentSearches, setRecentSearches] = useState([]);
+  const [previewVisible, setPreviewVisible] = useState(false);
 
   // Sync settings to services
   useSettingsSync();
+
+  // Get theme colors
+  const { colors, isDark } = useTheme();
 
   // Flight history
   const { addFlightToHistory } = useFlightHistory();
@@ -207,9 +213,30 @@ function AppContent() {
     }
   };
 
+  // Dynamic styles based on theme
+  const themedStyles = {
+    container: { ...styles.container, backgroundColor: colors.background },
+    title: { ...styles.title, color: colors.primary },
+    subtitle: { ...styles.subtitle, color: colors.textSecondary },
+    headerButtonIcon: { ...styles.headerButtonIcon, color: colors.textSecondary },
+    input: { ...styles.input, backgroundColor: colors.inputBackground, color: colors.text },
+    browseBtn: { ...styles.browseBtn, backgroundColor: colors.buttonBackground },
+    browseBtnText: { ...styles.browseBtnText, color: colors.primary },
+    previewBtn: { ...styles.previewBtn, backgroundColor: colors.buttonBackground },
+    previewBtnText: { ...styles.previewBtnText, color: colors.primary },
+    downloadBtn: { ...styles.downloadBtn, backgroundColor: colors.primary },
+    downloadBtnText: { ...styles.downloadBtnText, color: colors.primaryDark },
+    narrationContainer: { ...styles.narrationContainer, backgroundColor: colors.backgroundSecondary },
+    narrationText: { ...styles.narrationText, color: colors.text },
+    button: { ...styles.button, backgroundColor: colors.primary },
+    buttonText: { ...styles.buttonText, color: colors.primaryDark },
+    buttonSecondary: { ...styles.buttonSecondary, backgroundColor: 'transparent', borderColor: colors.primary },
+    buttonTextSecondary: { ...styles.buttonTextSecondary, color: colors.primary },
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={themedStyles.container}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
       <View style={styles.header} accessibilityRole="header">
@@ -220,11 +247,11 @@ function AppContent() {
           accessibilityHint="Opens your flight history and favorites"
           accessibilityRole="button"
         >
-          <Text style={styles.headerButtonIcon}>☰</Text>
+          <Text style={themedStyles.headerButtonIcon}>☰</Text>
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.title} accessibilityRole="header">WINDOW SEAT</Text>
-          <Text style={styles.subtitle}>AI Flight Narrator</Text>
+          <Text style={themedStyles.title} accessibilityRole="header">WINDOW SEAT</Text>
+          <Text style={themedStyles.subtitle}>AI Flight Narrator</Text>
         </View>
         <TouchableOpacity
           style={styles.headerButton}
@@ -233,7 +260,7 @@ function AppContent() {
           accessibilityHint="Opens app settings"
           accessibilityRole="button"
         >
-          <Text style={styles.headerButtonIcon}>⚙</Text>
+          <Text style={themedStyles.headerButtonIcon}>⚙</Text>
         </TouchableOpacity>
       </View>
 
@@ -284,27 +311,70 @@ function AppContent() {
         )}
 
         {/* Flight Number Input */}
-        <View style={styles.inputContainer} accessibilityRole="search">
-          <TextInput
-            style={styles.input}
-            placeholder="Enter Flight Number (e.g., BA284)"
-            placeholderTextColor="#666"
-            value={flightNumber}
-            onChangeText={setFlightNumber}
-            autoCapitalize="characters"
-            accessibilityLabel="Flight number"
-            accessibilityHint="Enter your flight number to download narration pack"
-          />
-          <TouchableOpacity
-            style={styles.downloadBtn}
-            onPress={downloadFlightPack}
-            accessibilityLabel="Download flight pack"
-            accessibilityHint={flightNumber ? `Downloads narration pack for flight ${flightNumber}` : "Enter a flight number first"}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: isLoading }}
-          >
-            <Text style={styles.downloadBtnText}>Download</Text>
-          </TouchableOpacity>
+        <View style={styles.inputSection}>
+          <View style={styles.inputContainer} accessibilityRole="search">
+            <TextInput
+              style={themedStyles.input}
+              placeholder="Enter Flight Number (e.g., BA284)"
+              placeholderTextColor={colors.textMuted}
+              value={flightNumber}
+              onChangeText={(text) => {
+                setFlightNumber(text);
+                if (searchVisible) setSearchVisible(false);
+              }}
+              autoCapitalize="characters"
+              accessibilityLabel="Flight number"
+              accessibilityHint="Enter your flight number to download narration pack"
+            />
+            <TouchableOpacity
+              style={themedStyles.browseBtn}
+              onPress={() => setSearchVisible(!searchVisible)}
+              accessibilityLabel={searchVisible ? "Hide flight browser" : "Browse flights"}
+              accessibilityHint="Shows demo flights and popular routes"
+              accessibilityRole="button"
+              accessibilityState={{ expanded: searchVisible }}
+            >
+              <Text style={themedStyles.browseBtnText}>{searchVisible ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={themedStyles.previewBtn}
+              onPress={() => flightNumber.trim() && setPreviewVisible(true)}
+              accessibilityLabel="Preview route"
+              accessibilityHint={flightNumber ? `Preview route for flight ${flightNumber}` : "Enter a flight number first"}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !flightNumber.trim() }}
+            >
+              <Text style={themedStyles.previewBtnText}>Preview</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={themedStyles.downloadBtn}
+              onPress={downloadFlightPack}
+              accessibilityLabel="Download flight pack"
+              accessibilityHint={flightNumber ? `Downloads narration pack for flight ${flightNumber}` : "Enter a flight number first"}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isLoading }}
+            >
+              <Text style={themedStyles.downloadBtnText}>Download</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Flight Search Browser */}
+          {searchVisible && (
+            <View style={styles.searchContainer}>
+              <FlightSearch
+                onSelectFlight={(flight) => {
+                  setFlightNumber(flight);
+                  setSearchVisible(false);
+                  // Add to recent searches
+                  setRecentSearches(prev => {
+                    const filtered = prev.filter(s => s !== flight);
+                    return [flight, ...filtered].slice(0, 5);
+                  });
+                }}
+                recentSearches={recentSearches}
+              />
+            </View>
+          )}
         </View>
 
         {/* Map View */}
@@ -355,7 +425,7 @@ function AppContent() {
 
         {/* Narration Display */}
         <View
-          style={[styles.narrationContainer, mapExpanded && styles.narrationCollapsed]}
+          style={[themedStyles.narrationContainer, mapExpanded && styles.narrationCollapsed]}
           accessibilityRole="text"
           accessibilityLabel={isLoading ? "Loading narration" : "Flight narration"}
           accessibilityLiveRegion="polite"
@@ -363,7 +433,7 @@ function AppContent() {
           {isLoading ? (
             <NarrationSkeleton />
           ) : (
-            <Text style={styles.narrationText} accessibilityRole="text">
+            <Text style={themedStyles.narrationText} accessibilityRole="text">
               {narration}
             </Text>
           )}
@@ -372,27 +442,27 @@ function AppContent() {
         {/* Action Buttons */}
         <View style={styles.buttonRow} accessibilityRole="toolbar">
           <TouchableOpacity
-            style={[styles.button, styles.buttonSecondary]}
+            style={[themedStyles.button, themedStyles.buttonSecondary]}
             onPress={toggleTracking}
             accessibilityLabel={isTracking ? "Stop tracking" : "Start tracking"}
             accessibilityHint={isTracking ? "Stops GPS location tracking" : "Starts GPS tracking to trigger narrations automatically"}
             accessibilityRole="button"
             accessibilityState={{ checked: isTracking }}
           >
-            <Text style={styles.buttonTextSecondary}>
+            <Text style={themedStyles.buttonTextSecondary}>
               {isTracking ? "Stop Tracking" : "Start Tracking"}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.button}
+            style={themedStyles.button}
             onPress={scanHorizon}
             accessibilityLabel="Scan horizon"
             accessibilityHint="Gets your current location and generates a narration"
             accessibilityRole="button"
             accessibilityState={{ disabled: isLoading }}
           >
-            <Text style={styles.buttonText}>Scan Horizon</Text>
+            <Text style={themedStyles.buttonText}>Scan Horizon</Text>
           </TouchableOpacity>
         </View>
 
@@ -439,6 +509,14 @@ function AppContent() {
             downloadFlightPack();
           }, 100);
         }}
+      />
+
+      {/* Route Preview Modal */}
+      <RoutePreview
+        flightNumber={flightNumber.toUpperCase()}
+        visible={previewVisible}
+        onClose={() => setPreviewVisible(false)}
+        onDownload={downloadFlightPack}
       />
     </SafeAreaView>
   );
@@ -532,9 +610,11 @@ const styles = StyleSheet.create({
   windowSideAdvisor: {
     marginBottom: 10,
   },
+  inputSection: {
+    marginBottom: 20,
+  },
   inputContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
   },
   input: {
     flex: 1,
@@ -543,7 +623,30 @@ const styles = StyleSheet.create({
     padding: 15,
     color: '#ffffff',
     fontSize: 16,
-    marginRight: 10,
+    marginRight: 8,
+  },
+  browseBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  browseBtnText: {
+    color: '#00d4ff',
+    fontSize: 14,
+  },
+  previewBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  previewBtnText: {
+    color: '#00d4ff',
+    fontWeight: '600',
+    fontSize: 13,
   },
   downloadBtn: {
     backgroundColor: '#00d4ff',
@@ -554,6 +657,13 @@ const styles = StyleSheet.create({
   downloadBtnText: {
     color: '#0a1628',
     fontWeight: 'bold',
+  },
+  searchContainer: {
+    marginTop: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 12,
+    padding: 12,
+    maxHeight: 350,
   },
   narrationContainer: {
     backgroundColor: '#0d1e33',

@@ -20,8 +20,22 @@ class ClaudeService {
     this.narrationPreferences = {
       contentFocus: 'mixed', // geological, historical, cultural, mixed
       length: 'medium',      // short, medium, long
+      language: 'en',        // Language code for narrations
     };
   }
+
+  // Language display names for prompt
+  static LANGUAGE_NAMES = {
+    en: 'English',
+    es: 'Spanish',
+    fr: 'French',
+    de: 'German',
+    it: 'Italian',
+    pt: 'Portuguese',
+    ja: 'Japanese',
+    zh: 'Chinese (Simplified)',
+    ko: 'Korean',
+  };
 
   getLastError() {
     return this.lastError;
@@ -171,6 +185,13 @@ class ClaudeService {
     // Build landmark context if available
     const landmarkContext = this.buildLandmarkContext(context);
 
+    // Build language instruction
+    const language = this.narrationPreferences.language || 'en';
+    const languageName = ClaudeService.LANGUAGE_NAMES[language] || 'English';
+    const languageInstruction = language !== 'en'
+      ? `IMPORTANT: Write the narration in ${languageName}. The entire response must be in ${languageName}.`
+      : '';
+
     return `You are a knowledgeable flight narrator for the "Window Seat" app. Generate an engaging, informative narration about what a passenger would see looking out their airplane window at these coordinates.
 
 Location: ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°
@@ -185,6 +206,7 @@ Guidelines:
 - Use vivid but concise language suitable for audio narration
 - Don't mention the coordinates directly - describe what's there
 - If over ocean, describe maritime features, shipping routes, or underwater geography
+${languageInstruction}
 
 Respond with ONLY the narration text, no additional commentary.`;
   }

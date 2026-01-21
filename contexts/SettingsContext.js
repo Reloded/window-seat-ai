@@ -22,6 +22,10 @@ const DEFAULT_SETTINGS = {
     distanceInterval: 1000, // meters
     timeInterval: 5000,     // ms
   },
+  display: {
+    theme: 'dark',          // dark, light, system
+    language: 'en',         // en, es, fr, de, it, pt, ja, zh, ko
+  },
   api: {
     claudeApiKey: '',
     elevenLabsApiKey: '',
@@ -89,6 +93,10 @@ export function SettingsProvider({ children }) {
     updateSettings('gps', updates);
   }, [updateSettings]);
 
+  const updateDisplaySettings = useCallback((updates) => {
+    updateSettings('display', updates);
+  }, [updateSettings]);
+
   const updateApiSettings = useCallback((updates) => {
     updateSettings('api', updates);
   }, [updateSettings]);
@@ -104,6 +112,7 @@ export function SettingsProvider({ children }) {
     updateVoiceSettings,
     updateNarrationSettings,
     updateGpsSettings,
+    updateDisplaySettings,
     updateApiSettings,
     resetSettings,
     DEFAULT_SETTINGS,

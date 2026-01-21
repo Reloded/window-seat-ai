@@ -358,6 +358,37 @@ class NarrationService {
     };
   }
 
+  // Get checkpoint locations only (for preview, without generating narrations)
+  async getCheckpointLocationsOnly(route, flightNumber) {
+    if (!route || route.length < 2) {
+      return [];
+    }
+
+    // Convert route to checkpoints
+    let checkpoints = routeToCheckpoints(route, {
+      numCheckpoints: 20,
+      minSpacing: 80000,
+      geofenceRadius: 15000,
+    });
+
+    // Enrich with landmark data (this is relatively fast)
+    try {
+      checkpoints = await landmarkService.enrichCheckpoints(checkpoints, {
+        timeout: 5000, // Limit timeout for preview
+      });
+    } catch (error) {
+      console.warn('Landmark enrichment failed for preview:', error);
+    }
+
+    // Return just name and type for preview (no narrations)
+    return checkpoints.map(cp => ({
+      name: cp.name,
+      type: cp.type,
+      latitude: cp.latitude,
+      longitude: cp.longitude,
+    }));
+  }
+
   hasFlightDataSupport() {
     return flightDataService.isConfigured();
   }
