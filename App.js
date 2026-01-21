@@ -7,10 +7,9 @@ import {
   ScrollView,
   TextInput,
   StatusBar,
-  ActivityIndicator
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, SunTrackerDisplay, BorderCrossingAlert, ErrorBanner, FlightMap, SettingsModal, FlightHistoryModal } from './components';
+import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, SunTrackerDisplay, BorderCrossingAlert, ErrorBanner, NarrationSkeleton, CheckpointListSkeleton, FlightMap, SettingsModal, FlightHistoryModal } from './components';
 import { useLocationTracking, useSettingsSync } from './hooks';
 import { narrationService } from './services';
 import { isApiKeyConfigured } from './config';
@@ -317,14 +316,18 @@ function AppContent() {
         )}
 
         {/* Checkpoint List */}
-        {flightPackReady && checkpoints.length > 0 && (
+        {flightPackReady && checkpoints.length > 0 ? (
           <CheckpointList
             checkpoints={checkpoints}
             triggeredCheckpoints={triggeredCheckpoints}
             location={location}
             style={styles.checkpointList}
           />
-        )}
+        ) : isLoading && flightNumber.trim() ? (
+          <View style={styles.checkpointListSkeleton}>
+            <CheckpointListSkeleton count={4} />
+          </View>
+        ) : null}
 
         {/* Window Side Advisor */}
         {flightPackReady && flightRoute.length > 1 && checkpoints.length > 0 && (
@@ -339,12 +342,13 @@ function AppContent() {
         <View
           style={[styles.narrationContainer, mapExpanded && styles.narrationCollapsed]}
         >
-          {isLoading && (
-            <ActivityIndicator size="large" color="#00d4ff" style={styles.loader} />
+          {isLoading ? (
+            <NarrationSkeleton />
+          ) : (
+            <Text style={styles.narrationText}>
+              {narration}
+            </Text>
           )}
-          <Text style={styles.narrationText}>
-            {narration}
-          </Text>
         </View>
 
         {/* Action Buttons */}
@@ -486,6 +490,12 @@ const styles = StyleSheet.create({
   checkpointList: {
     marginBottom: 10,
   },
+  checkpointListSkeleton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+  },
   windowSideAdvisor: {
     marginBottom: 10,
   },
@@ -521,9 +531,6 @@ const styles = StyleSheet.create({
   },
   narrationCollapsed: {
     maxHeight: 100,
-  },
-  loader: {
-    marginBottom: 15,
   },
   narrationText: {
     color: '#ffffff',
