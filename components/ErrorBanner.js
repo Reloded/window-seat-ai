@@ -33,6 +33,12 @@ export function ErrorBanner({ message, type = 'error', onDismiss, style }) {
 
   const colors = typeStyles[type] || typeStyles.error;
 
+  const typeLabels = {
+    error: 'Error',
+    warning: 'Warning',
+    info: 'Information',
+  };
+
   return (
     <View
       style={[
@@ -40,14 +46,25 @@ export function ErrorBanner({ message, type = 'error', onDismiss, style }) {
         { backgroundColor: colors.background, borderLeftColor: colors.border },
         style,
       ]}
+      accessibilityRole="alert"
+      accessibilityLabel={`${typeLabels[type] || 'Alert'}: ${message}`}
+      accessibilityLiveRegion="assertive"
     >
-      <View style={[styles.iconContainer, { backgroundColor: colors.border }]}>
+      <View
+        style={[styles.iconContainer, { backgroundColor: colors.border }]}
+        accessibilityElementsHidden
+      >
         <Text style={styles.icon}>{colors.icon}</Text>
       </View>
-      <Text style={styles.message}>{message}</Text>
+      <Text style={styles.message} accessibilityElementsHidden>{message}</Text>
       {onDismiss && (
-        <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
-          <Text style={styles.dismissText}>×</Text>
+        <TouchableOpacity
+          style={styles.dismissButton}
+          onPress={onDismiss}
+          accessibilityLabel="Dismiss alert"
+          accessibilityRole="button"
+        >
+          <Text style={styles.dismissText} accessibilityElementsHidden>×</Text>
         </TouchableOpacity>
       )}
     </View>

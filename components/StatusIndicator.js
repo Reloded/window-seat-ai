@@ -2,11 +2,24 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 export function StatusIndicator({ isActive, activeText = 'ACTIVE', inactiveText = 'STANDBY' }) {
+  const statusText = isActive ? activeText : inactiveText;
+
   return (
-    <View style={styles.container}>
-      <View style={[styles.dot, isActive && styles.dotActive]} />
-      <Text style={[styles.text, isActive && styles.textActive]}>
-        {isActive ? activeText : inactiveText}
+    <View
+      style={styles.container}
+      accessibilityRole="text"
+      accessibilityLabel={`Status: ${statusText}`}
+      accessibilityLiveRegion="polite"
+    >
+      <View
+        style={[styles.dot, isActive && styles.dotActive]}
+        accessibilityElementsHidden
+      />
+      <Text
+        style={[styles.text, isActive && styles.textActive]}
+        accessibilityElementsHidden
+      >
+        {statusText}
       </Text>
     </View>
   );

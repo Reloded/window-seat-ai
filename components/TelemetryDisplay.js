@@ -5,23 +5,35 @@ import { formatAltitude, formatSpeed, formatCoordinateDecimal } from '../utils/c
 export function TelemetryDisplay({ location, style }) {
   const coords = location?.coords;
 
+  const accessibilityLabel = coords
+    ? `Current position: Latitude ${formatCoordinateDecimal(coords.latitude)}, Longitude ${formatCoordinateDecimal(coords.longitude)}, Altitude ${formatAltitude(coords.altitude)} feet, Speed ${formatSpeed(coords.speed)} knots`
+    : 'Waiting for GPS location';
+
   return (
-    <View style={[styles.container, style]}>
+    <View
+      style={[styles.container, style]}
+      accessibilityRole="text"
+      accessibilityLabel={accessibilityLabel}
+    >
       <TelemetryItem
         label="LAT"
+        fullLabel="Latitude"
         value={formatCoordinateDecimal(coords?.latitude)}
       />
       <TelemetryItem
         label="LNG"
+        fullLabel="Longitude"
         value={formatCoordinateDecimal(coords?.longitude)}
       />
       <TelemetryItem
         label="ALT"
+        fullLabel="Altitude"
         value={formatAltitude(coords?.altitude)}
         unit="FT"
       />
       <TelemetryItem
         label="SPD"
+        fullLabel="Speed"
         value={formatSpeed(coords?.speed)}
         unit="KTS"
       />
@@ -29,9 +41,9 @@ export function TelemetryDisplay({ location, style }) {
   );
 }
 
-function TelemetryItem({ label, value, unit }) {
+function TelemetryItem({ label, fullLabel, value, unit }) {
   return (
-    <View style={styles.item}>
+    <View style={styles.item} accessibilityElementsHidden>
       <Text style={styles.label}>{label}</Text>
       <Text style={styles.value}>
         {value}{unit ? ` ${unit}` : ''}

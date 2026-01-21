@@ -83,13 +83,16 @@ export function AudioPlayerControls({ style, showQueueControls = true }) {
   // Show Play All button when queue is available but not active
   if (showQueueControls && hasQueue && !queueStatus.isActive && !isPlaying && !isPaused) {
     return (
-      <View style={[styles.container, style]}>
+      <View style={[styles.container, style]} accessibilityRole="toolbar">
         <TouchableOpacity
           style={styles.playAllButton}
           onPress={handlePlayAll}
+          accessibilityLabel={`Play all ${queueCheckpoints.length} narrations`}
+          accessibilityHint="Plays all checkpoint narrations in sequence"
+          accessibilityRole="button"
         >
-          <Text style={styles.playAllIcon}>▶</Text>
-          <Text style={styles.playAllText}>Play All ({queueCheckpoints.length})</Text>
+          <Text style={styles.playAllIcon} accessibilityElementsHidden>▶</Text>
+          <Text style={styles.playAllText} accessibilityElementsHidden>Play All ({queueCheckpoints.length})</Text>
         </TouchableOpacity>
       </View>
     );
@@ -99,19 +102,27 @@ export function AudioPlayerControls({ style, showQueueControls = true }) {
     return null;
   }
 
+  const statusLabel = queueStatus.isActive
+    ? `Playing ${queueStatus.currentIndex + 1} of ${queueStatus.totalCount}: ${queueStatus.currentCheckpoint?.name || 'Loading'}`
+    : isPlaying ? 'Playing' : isPaused ? 'Paused' : 'Ready';
+
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, style]} accessibilityRole="toolbar" accessibilityLabel="Audio player controls">
       {/* Skip Previous - only in queue mode */}
       {queueStatus.isActive && (
         <TouchableOpacity
           style={[styles.button, styles.skipButton]}
           onPress={handleSkipPrevious}
           disabled={queueStatus.currentIndex === 0}
+          accessibilityLabel="Previous"
+          accessibilityHint="Go to previous narration"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: queueStatus.currentIndex === 0 }}
         >
           <Text style={[
             styles.buttonIcon,
             queueStatus.currentIndex === 0 && styles.buttonIconDisabled
-          ]}>⏮</Text>
+          ]} accessibilityElementsHidden>⏮</Text>
         </TouchableOpacity>
       )}
 
@@ -119,17 +130,25 @@ export function AudioPlayerControls({ style, showQueueControls = true }) {
       <TouchableOpacity
         style={[styles.button, styles.playPauseButton]}
         onPress={handlePlayPause}
+        accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
+        accessibilityHint={isPlaying ? 'Pause audio playback' : 'Resume audio playback'}
+        accessibilityRole="button"
       >
-        <Text style={styles.buttonIcon}>
+        <Text style={styles.buttonIcon} accessibilityElementsHidden>
           {isPlaying ? '⏸' : '▶'}
         </Text>
       </TouchableOpacity>
 
       {/* Status */}
-      <View style={styles.statusContainer}>
-        <View style={[styles.statusDot, isPlaying && styles.statusDotPlaying]} />
+      <View
+        style={styles.statusContainer}
+        accessibilityRole="text"
+        accessibilityLabel={statusLabel}
+        accessibilityLiveRegion="polite"
+      >
+        <View style={[styles.statusDot, isPlaying && styles.statusDotPlaying]} accessibilityElementsHidden />
         {queueStatus.isActive ? (
-          <View style={styles.queueInfo}>
+          <View style={styles.queueInfo} accessibilityElementsHidden>
             <Text style={styles.queueProgress}>
               {queueStatus.currentIndex + 1}/{queueStatus.totalCount}
             </Text>
@@ -138,7 +157,7 @@ export function AudioPlayerControls({ style, showQueueControls = true }) {
             </Text>
           </View>
         ) : (
-          <Text style={styles.statusText}>
+          <Text style={styles.statusText} accessibilityElementsHidden>
             {isPlaying ? 'PLAYING' : isPaused ? 'PAUSED' : 'READY'}
           </Text>
         )}
@@ -150,11 +169,15 @@ export function AudioPlayerControls({ style, showQueueControls = true }) {
           style={[styles.button, styles.skipButton]}
           onPress={handleSkipNext}
           disabled={queueStatus.currentIndex >= queueStatus.totalCount - 1}
+          accessibilityLabel="Next"
+          accessibilityHint="Skip to next narration"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: queueStatus.currentIndex >= queueStatus.totalCount - 1 }}
         >
           <Text style={[
             styles.buttonIcon,
             queueStatus.currentIndex >= queueStatus.totalCount - 1 && styles.buttonIconDisabled
-          ]}>⏭</Text>
+          ]} accessibilityElementsHidden>⏭</Text>
         </TouchableOpacity>
       )}
 
@@ -162,8 +185,11 @@ export function AudioPlayerControls({ style, showQueueControls = true }) {
       <TouchableOpacity
         style={[styles.button, styles.stopButton]}
         onPress={handleStop}
+        accessibilityLabel="Stop"
+        accessibilityHint="Stop audio playback"
+        accessibilityRole="button"
       >
-        <Text style={styles.buttonIcon}>⏹</Text>
+        <Text style={styles.buttonIcon} accessibilityElementsHidden>⏹</Text>
       </TouchableOpacity>
     </View>
   );

@@ -212,20 +212,26 @@ function AppContent() {
       <StatusBar barStyle="light-content" />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={styles.header} accessibilityRole="header">
         <TouchableOpacity
           style={styles.headerButton}
           onPress={() => setHistoryVisible(true)}
+          accessibilityLabel="Flight history"
+          accessibilityHint="Opens your flight history and favorites"
+          accessibilityRole="button"
         >
           <Text style={styles.headerButtonIcon}>☰</Text>
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>WINDOW SEAT</Text>
+          <Text style={styles.title} accessibilityRole="header">WINDOW SEAT</Text>
           <Text style={styles.subtitle}>AI Flight Narrator</Text>
         </View>
         <TouchableOpacity
           style={styles.headerButton}
           onPress={() => setSettingsVisible(true)}
+          accessibilityLabel="Settings"
+          accessibilityHint="Opens app settings"
+          accessibilityRole="button"
         >
           <Text style={styles.headerButtonIcon}>⚙</Text>
         </TouchableOpacity>
@@ -278,7 +284,7 @@ function AppContent() {
         )}
 
         {/* Flight Number Input */}
-        <View style={styles.inputContainer}>
+        <View style={styles.inputContainer} accessibilityRole="search">
           <TextInput
             style={styles.input}
             placeholder="Enter Flight Number (e.g., BA284)"
@@ -286,8 +292,17 @@ function AppContent() {
             value={flightNumber}
             onChangeText={setFlightNumber}
             autoCapitalize="characters"
+            accessibilityLabel="Flight number"
+            accessibilityHint="Enter your flight number to download narration pack"
           />
-          <TouchableOpacity style={styles.downloadBtn} onPress={downloadFlightPack}>
+          <TouchableOpacity
+            style={styles.downloadBtn}
+            onPress={downloadFlightPack}
+            accessibilityLabel="Download flight pack"
+            accessibilityHint={flightNumber ? `Downloads narration pack for flight ${flightNumber}` : "Enter a flight number first"}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isLoading }}
+          >
             <Text style={styles.downloadBtnText}>Download</Text>
           </TouchableOpacity>
         </View>
@@ -341,28 +356,42 @@ function AppContent() {
         {/* Narration Display */}
         <View
           style={[styles.narrationContainer, mapExpanded && styles.narrationCollapsed]}
+          accessibilityRole="text"
+          accessibilityLabel={isLoading ? "Loading narration" : "Flight narration"}
+          accessibilityLiveRegion="polite"
         >
           {isLoading ? (
             <NarrationSkeleton />
           ) : (
-            <Text style={styles.narrationText}>
+            <Text style={styles.narrationText} accessibilityRole="text">
               {narration}
             </Text>
           )}
         </View>
 
         {/* Action Buttons */}
-        <View style={styles.buttonRow}>
+        <View style={styles.buttonRow} accessibilityRole="toolbar">
           <TouchableOpacity
             style={[styles.button, styles.buttonSecondary]}
             onPress={toggleTracking}
+            accessibilityLabel={isTracking ? "Stop tracking" : "Start tracking"}
+            accessibilityHint={isTracking ? "Stops GPS location tracking" : "Starts GPS tracking to trigger narrations automatically"}
+            accessibilityRole="button"
+            accessibilityState={{ checked: isTracking }}
           >
             <Text style={styles.buttonTextSecondary}>
               {isTracking ? "Stop Tracking" : "Start Tracking"}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.button} onPress={scanHorizon}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={scanHorizon}
+            accessibilityLabel="Scan horizon"
+            accessibilityHint="Gets your current location and generates a narration"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isLoading }}
+          >
             <Text style={styles.buttonText}>Scan Horizon</Text>
           </TouchableOpacity>
         </View>
@@ -371,7 +400,7 @@ function AppContent() {
         <AudioPlayerControls style={styles.audioControls} />
 
         {/* Status Bar */}
-        <View style={styles.statusBar}>
+        <View style={styles.statusBar} accessibilityRole="toolbar">
           <StatusIndicator
             isActive={isTracking}
             activeText="LIVE TRACKING"
@@ -380,8 +409,12 @@ function AppContent() {
           <TouchableOpacity
             style={styles.audioToggle}
             onPress={() => setAudioEnabled(!audioEnabled)}
+            accessibilityLabel={audioEnabled ? "Mute audio" : "Unmute audio"}
+            accessibilityHint={audioEnabled ? "Disables voice narrations" : "Enables voice narrations"}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: audioEnabled }}
           >
-            <Text style={styles.audioToggleText}>
+            <Text style={styles.audioToggleText} accessibilityElementsHidden>
               {audioEnabled ? '🔊' : '🔇'}
             </Text>
           </TouchableOpacity>
