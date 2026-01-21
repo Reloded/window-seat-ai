@@ -2,9 +2,40 @@ import { API_CONFIG, isApiKeyConfigured } from '../config/api';
 
 const AEROAPI_BASE_URL = 'https://aeroapi.flightaware.com/aeroapi';
 
+// User-friendly error messages
+const ERROR_MESSAGES = {
+  API_KEY_MISSING: 'Flight API not configured. Using demo route data.',
+  FLIGHT_NOT_FOUND: 'Flight not found. Check the flight number and try again.',
+  NETWORK_ERROR: 'Unable to connect to flight data service. Using demo route.',
+  RATE_LIMITED: 'Flight data service is busy. Using demo route.',
+  SERVER_ERROR: 'Flight data service temporarily unavailable. Using demo route.',
+  INVALID_KEY: 'Flight API key is invalid. Please check your key in Settings.',
+  UNKNOWN: 'Unable to fetch flight data. Using demo route.',
+};
+
 class FlightDataService {
   constructor() {
     this.config = API_CONFIG.flightData;
+    this.lastError = null;
+  }
+
+  getLastError() {
+    return this.lastError;
+  }
+
+  clearError() {
+    this.lastError = null;
+  }
+
+  _setError(code, details = null) {
+    this.lastError = {
+      code,
+      message: ERROR_MESSAGES[code] || ERROR_MESSAGES.UNKNOWN,
+      details,
+      timestamp: new Date().toISOString(),
+    };
+    console.warn(`FlightDataService [${code}]:`, this.lastError.message, details || '');
+    return this.lastError;
   }
 
   isConfigured() {
@@ -13,17 +44,22 @@ class FlightDataService {
 
   // Main method to get flight route
   async getFlightRoute(flightNumber) {
+    this.clearError();
+
     if (!this.isConfigured()) {
-      console.log('Flight API not configured, using mock route');
-      return this.getMockRoute(flightNumber);
+      this._setError('API_KEY_MISSING');
+      const mockRoute = this.getMockRoute(flightNumber);
+      return { ...mockRoute, usingMockData: true, error: this.lastError };
     }
 
     try {
       // Try AeroAPI first
-      return await this.fetchFromAeroAPI(flightNumber);
+      const route = await this.fetchFromAeroAPI(flightNumber);
+      return { ...route, usingMockData: false };
     } catch (error) {
-      console.error('Failed to fetch flight data:', error);
-      return this.getMockRoute(flightNumber);
+      // Error already set in fetchFromAeroAPI or aeroAPIRequest
+      const mockRoute = this.getMockRoute(flightNumber);
+      return { ...mockRoute, usingMockData: true, error: this.lastError };
     }
   }
 
@@ -35,6 +71,7 @@ class FlightDataService {
     const flightInfo = await this.aeroAPIRequest(`/flights/${normalizedFlight}`);
 
     if (!flightInfo.flights || flightInfo.flights.length === 0) {
+      this._setError('FLIGHT_NOT_FOUND', `Flight ${normalizedFlight} not found in database`);
       throw new Error('Flight not found');
     }
 
@@ -80,18 +117,40 @@ class FlightDataService {
   }
 
   async aeroAPIRequest(endpoint) {
-    const response = await fetch(`${AEROAPI_BASE_URL}${endpoint}`, {
-      headers: {
-        'x-apikey': this.config.apiKey,
-      },
-    });
+    try {
+      const response = await fetch(`${AEROAPI_BASE_URL}${endpoint}`, {
+        headers: {
+          'x-apikey': this.config.apiKey,
+        },
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.detail || `AeroAPI error: ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.detail || `Status ${response.status}`;
+
+        if (response.status === 401) {
+          this._setError('INVALID_KEY', errorMessage);
+        } else if (response.status === 404) {
+          this._setError('FLIGHT_NOT_FOUND', errorMessage);
+        } else if (response.status === 429) {
+          this._setError('RATE_LIMITED', errorMessage);
+        } else if (response.status >= 500) {
+          this._setError('SERVER_ERROR', errorMessage);
+        } else {
+          this._setError('UNKNOWN', errorMessage);
+        }
+        throw new Error(errorMessage);
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        this._setError('NETWORK_ERROR', error.message);
+      } else if (!this.lastError) {
+        this._setError('UNKNOWN', error.message);
+      }
+      throw error;
     }
-
-    return response.json();
   }
 
   buildRouteFromAeroAPI(flight, trackPoints) {

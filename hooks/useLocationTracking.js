@@ -17,18 +17,20 @@ export function useLocationTracking(options = {}) {
     checkpointsRef.current = options.checkpoints || [];
   }, [options.checkpoints]);
 
+  // Subscribe to error events from LocationService
+  useEffect(() => {
+    const unsubscribeError = locationService.onError((err) => {
+      setError(err.message);
+    });
+    return unsubscribeError;
+  }, []);
+
   // Request permissions on mount
   useEffect(() => {
     async function initPermissions() {
-      try {
-        const granted = await locationService.requestPermissions();
-        setPermissionGranted(granted);
-        if (!granted) {
-          setError('Location permission denied. Enable it in settings.');
-        }
-      } catch (err) {
-        setError(err.message);
-      }
+      const granted = await locationService.requestPermissions();
+      setPermissionGranted(granted);
+      // Error is now set via onError subscription
     }
     initPermissions();
   }, []);
@@ -59,29 +61,28 @@ export function useLocationTracking(options = {}) {
   }, [options.onCheckpointEntered]);
 
   const getCurrentPosition = useCallback(async () => {
-    try {
-      setError(null);
-      const loc = await locationService.getCurrentPosition();
+    setError(null);
+    locationService.clearError();
+    const loc = await locationService.getCurrentPosition();
+    if (loc) {
       setLocation(loc);
-      return loc;
-    } catch (err) {
-      setError(err.message);
-      throw err;
     }
+    // Error is set via onError subscription if location is null
+    return loc;
   }, []);
 
   const startTracking = useCallback(async (trackingOptions = {}) => {
-    try {
-      setError(null);
-      await locationService.startTracking({
-        distanceInterval: trackingOptions.distanceInterval || options.distanceInterval || 500,
-        timeInterval: trackingOptions.timeInterval || options.timeInterval || 5000,
-      });
+    setError(null);
+    locationService.clearError();
+    const result = await locationService.startTracking({
+      distanceInterval: trackingOptions.distanceInterval || options.distanceInterval || 500,
+      timeInterval: trackingOptions.timeInterval || options.timeInterval || 5000,
+    });
+    if (result.success) {
       setIsTracking(true);
-    } catch (err) {
-      setError(err.message);
-      throw err;
     }
+    // Error is set via onError subscription if failed
+    return result;
   }, [options.distanceInterval, options.timeInterval]);
 
   const stopTracking = useCallback(() => {
@@ -94,6 +95,11 @@ export function useLocationTracking(options = {}) {
     setTriggeredCheckpoints(new Set());
   }, []);
 
+  const clearError = useCallback(() => {
+    setError(null);
+    locationService.clearError();
+  }, []);
+
   return {
     location,
     isTracking,
@@ -104,6 +110,7 @@ export function useLocationTracking(options = {}) {
     startTracking,
     stopTracking,
     resetTriggeredCheckpoints,
+    clearError,
   };
 }
 

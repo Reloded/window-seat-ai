@@ -2,13 +2,43 @@ import { API_CONFIG, isApiKeyConfigured } from '../config/api';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
+// User-friendly error messages
+const ERROR_MESSAGES = {
+  API_KEY_MISSING: 'Claude API key not configured. Add your key in Settings to enable AI narrations.',
+  NETWORK_ERROR: 'Unable to connect to AI service. Check your internet connection.',
+  RATE_LIMITED: 'AI service is busy. Narrations will retry automatically.',
+  INVALID_KEY: 'Claude API key is invalid. Please check your key in Settings.',
+  SERVER_ERROR: 'AI service is temporarily unavailable. Using fallback narrations.',
+  UNKNOWN: 'Unable to generate narration. Using fallback.',
+};
+
 class ClaudeService {
   constructor() {
     this.config = API_CONFIG.claude;
+    this.lastError = null;
     this.narrationPreferences = {
       contentFocus: 'mixed', // geological, historical, cultural, mixed
       length: 'medium',      // short, medium, long
     };
+  }
+
+  getLastError() {
+    return this.lastError;
+  }
+
+  clearError() {
+    this.lastError = null;
+  }
+
+  _setError(code, details = null) {
+    this.lastError = {
+      code,
+      message: ERROR_MESSAGES[code] || ERROR_MESSAGES.UNKNOWN,
+      details,
+      timestamp: new Date().toISOString(),
+    };
+    console.warn(`ClaudeService error [${code}]:`, this.lastError.message, details || '');
+    return this.lastError;
   }
 
   updateNarrationPreferences(prefs) {
@@ -28,7 +58,8 @@ class ClaudeService {
 
   async generateNarration(latitude, longitude, altitude, context = {}) {
     if (!this.isConfigured()) {
-      throw new Error('Claude API key not configured');
+      this._setError('API_KEY_MISSING');
+      return null;
     }
 
     const prompt = this.buildNarrationPrompt(latitude, longitude, altitude, context);
@@ -54,15 +85,31 @@ class ClaudeService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Claude API request failed');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error?.message || '';
+
+        if (response.status === 401) {
+          this._setError('INVALID_KEY', errorMessage);
+        } else if (response.status === 429) {
+          this._setError('RATE_LIMITED', errorMessage);
+        } else if (response.status >= 500) {
+          this._setError('SERVER_ERROR', errorMessage);
+        } else {
+          this._setError('UNKNOWN', errorMessage);
+        }
+        return null;
       }
 
       const data = await response.json();
+      this.clearError();
       return data.content[0].text;
     } catch (error) {
-      console.error('Claude API error:', error);
-      throw error;
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        this._setError('NETWORK_ERROR', error.message);
+      } else {
+        this._setError('UNKNOWN', error.message);
+      }
+      return null;
     }
   }
 
@@ -155,28 +202,30 @@ Respond with ONLY the narration text, no additional commentary.`;
     const narrations = [];
 
     for (const checkpoint of checkpoints) {
-      try {
-        const narration = await this.generateNarration(
-          checkpoint.latitude,
-          checkpoint.longitude,
-          checkpoint.altitude || 35000 / 3.28084, // Default cruise altitude
-          { flightInfo, checkpoint }
-        );
+      const narration = await this.generateNarration(
+        checkpoint.latitude,
+        checkpoint.longitude,
+        checkpoint.altitude || 35000 / 3.28084, // Default cruise altitude
+        { flightInfo, checkpoint }
+      );
 
+      if (narration) {
         narrations.push({
           ...checkpoint,
           narration,
         });
-      } catch (error) {
-        console.error(`Failed to generate narration for ${checkpoint.name}:`, error);
+      } else {
+        // Use fallback narration when API fails
+        console.warn(`Using fallback narration for ${checkpoint.name}`);
         narrations.push({
           ...checkpoint,
           narration: `Approaching ${checkpoint.name}.`,
+          fallback: true,
         });
       }
     }
 
-    return narrations;
+    return { narrations, error: this.lastError };
   }
 
   async generateRouteNarrations(routePoints, numCheckpoints = 20, flightInfo = '') {

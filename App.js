@@ -10,7 +10,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, SunTrackerDisplay, BorderCrossingAlert, FlightMap, SettingsModal, FlightHistoryModal } from './components';
+import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, SunTrackerDisplay, BorderCrossingAlert, ErrorBanner, FlightMap, SettingsModal, FlightHistoryModal } from './components';
 import { useLocationTracking, useSettingsSync } from './hooks';
 import { narrationService } from './services';
 import { isApiKeyConfigured } from './config';
@@ -61,6 +61,7 @@ function AppContent() {
     startTracking,
     stopTracking,
     resetTriggeredCheckpoints,
+    clearError,
   } = useLocationTracking({
     distanceInterval: settings.gps.distanceInterval,
     onCheckpointEntered: handleCheckpointEntered,
@@ -71,29 +72,32 @@ function AppContent() {
     setNarration("Scanning horizon...");
     setIsLoading(true);
 
-    try {
-      const loc = await getCurrentPosition();
-      const { latitude, longitude, altitude } = loc.coords;
-
-      // Use Claude API if configured, otherwise fall back to mock
-      const narrationText = await narrationService.generateLiveNarration(
-        latitude,
-        longitude,
-        altitude
-      );
-
-      setNarration(narrationText);
-
-      // Generate and play audio if ElevenLabs is configured
-      if (audioEnabled && narrationService.hasAudioSupport()) {
-        setNarration(narrationText + "\n\nGenerating audio...");
-        await narrationService.playCurrentNarration(narrationText);
-      }
-    } catch (err) {
-      setNarration("Could not get location. Make sure GPS is enabled.");
-    } finally {
+    const loc = await getCurrentPosition();
+    if (!loc) {
+      // Error is shown via ErrorBanner
+      setNarration("Unable to scan. Please check your location settings.");
       setIsLoading(false);
+      return;
     }
+
+    const { latitude, longitude, altitude } = loc.coords;
+
+    // Use Claude API if configured, otherwise fall back to mock
+    const narrationText = await narrationService.generateLiveNarration(
+      latitude,
+      longitude,
+      altitude
+    );
+
+    setNarration(narrationText);
+
+    // Generate and play audio if ElevenLabs is configured
+    if (audioEnabled && narrationService.hasAudioSupport()) {
+      setNarration(narrationText + "\n\nGenerating audio...");
+      await narrationService.playCurrentNarration(narrationText);
+    }
+
+    setIsLoading(false);
   };
 
   const downloadFlightPack = async () => {
@@ -196,12 +200,11 @@ function AppContent() {
       stopTracking();
       setNarration("Live tracking paused. Press 'Start Tracking' to resume.");
     } else {
-      try {
-        await startTracking();
+      const result = await startTracking();
+      if (result.success) {
         setNarration("Live tracking enabled. Narrations will play automatically as you cross landmarks.");
-      } catch (err) {
-        setNarration("Could not start tracking. Check location permissions.");
       }
+      // Error is shown via ErrorBanner if tracking failed
     }
   };
 
@@ -238,6 +241,16 @@ function AppContent() {
       >
         {/* Telemetry Bar */}
         <TelemetryDisplay location={location} style={styles.telemetry} />
+
+        {/* Error Banner */}
+        {error && (
+          <ErrorBanner
+            message={error}
+            type="warning"
+            onDismiss={clearError}
+            style={styles.errorBanner}
+          />
+        )}
 
         {/* Sun Tracker */}
         {location && (
@@ -330,7 +343,7 @@ function AppContent() {
             <ActivityIndicator size="large" color="#00d4ff" style={styles.loader} />
           )}
           <Text style={styles.narrationText}>
-            {error || narration}
+            {narration}
           </Text>
         </View>
 
@@ -453,6 +466,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   telemetry: {
+    marginBottom: 10,
+  },
+  errorBanner: {
     marginBottom: 10,
   },
   sunTracker: {

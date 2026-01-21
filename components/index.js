@@ -7,6 +7,7 @@ export { CheckpointList } from './CheckpointList';
 export { WindowSideAdvisor } from './WindowSideAdvisor';
 export { SunTrackerDisplay } from './SunTrackerDisplay';
 export { BorderCrossingAlert } from './BorderCrossingAlert';
+export { ErrorBanner } from './ErrorBanner';
 export { FlightMap } from './map';
 export { SettingsModal } from './settings';
 export { FlightHistoryModal } from './history';
