@@ -6,9 +6,9 @@
 
 ## Current Position
 - **Milestone:** 1 (MVP Polish) - COMPLETE
-- **Phase:** 4 of 4 (New Features) - COMPLETE
+- **Phase:** 5 (Offline Maps) - COMPLETE (ad-hoc)
 - **Next:** Milestone 2 (Enhanced Content) or new work
-- **Status:** Milestone 1 Complete
+- **Status:** Ready for next milestone
 
 ## Progress
 ```
@@ -16,6 +16,7 @@ Phase 1: [████████████] Complete - Technical Debt
 Phase 2: [████████████] Complete - Native Map Support
 Phase 3: [████████████] Complete - UX Improvements
 Phase 4: [████████████] Complete - New Features
+Phase 5: [████████████] Complete - Offline Maps (ad-hoc)
 ```
 
 ## Recent Decisions
@@ -27,21 +28,23 @@ Phase 4: [████████████] Complete - New Features
 None currently.
 
 ## Session Continuity
-- **Last session:** 2026-01-21
-- **Last commit:** 9dc2105 - Complete Phase 4: New Features
-- **Resume file:** `.planning/phases/04-new-features/.continue-here.md`
+- **Last session:** 2026-01-22
+- **Last commit:** cea869f - docs: Add session notes for offline maps
+- **Resume file:** `.planning/phases/05-offline-maps/.continue-here.md`
 
 ## Pending Todos
 0 pending
 
 ## Files Modified This Session
-- `App.js` - FlightSearch, RoutePreview, themed styles
-- `components/FlightSearch.js` - New flight browser component
-- `components/RoutePreview.js` - New route preview modal
-- `components/settings/sections/DisplaySection.js` - Theme/language settings
-- `config/theme.js` - Dark/light theme colors
-- `hooks/useTheme.js` - Theme hook
-- `contexts/SettingsContext.js` - Display settings
-- `services/ClaudeService.js` - Multi-language support
-- `services/NarrationService.js` - Checkpoint preview method
-- `hooks/useSettingsSync.js` - Language sync
+- `utils/tileCalculations.ts` - XYZ tile math utilities (new)
+- `services/MapTileService.js` - Tile caching service (new)
+- `components/map/CachedTileLayer.web.js` - Leaflet offline layer (new)
+- `components/map/StaticFlightMap.js` - Native offline map (new)
+- `services/NarrationService.js` - Integrated tile download
+- `components/map/FlightMap.web.js` - CachedTileLayer integration
+- `components/map/FlightMap.js` - Offline fallback
+- `contexts/SettingsContext.js` - Map settings
+- `components/settings/sections/StorageSection.js` - Tile cache size
+- `services/LocationService.js` - Web compatibility fix
+- `services/BorderCrossingService.js` - Suppress warnings
+- `services/LandmarkService.js` - Suppress warnings
