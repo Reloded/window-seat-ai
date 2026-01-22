@@ -142,6 +142,31 @@ The app works without any API keys using demo data. Add keys for full functional
 - [x] Native map support with route, checkpoints, geofence circles, and user location
 - [x] Offline map tiles cached during flight pack download (IndexedDB on web, static images on native)
 
+## Recent Session Notes (2026-01-22)
+
+### Offline Maps Implementation Complete
+Implemented offline map tile caching so maps work at 35,000 feet:
+- **Web**: Custom Leaflet CachedTileLayer with IndexedDB storage
+- **Native**: Pre-rendered static map images (3 zoom levels)
+- Storage: ~2-10MB per flight depending on route length
+- Integrated into NarrationService.downloadFlightPack()
+
+### Files Added
+- `utils/tileCalculations.ts` - XYZ tile math utilities
+- `services/MapTileService.js` - Tile caching singleton
+- `components/map/CachedTileLayer.web.js` - Leaflet offline layer
+- `components/map/StaticFlightMap.js` - Native offline map component
+
+### Bug Fixes Applied
+- LocationService: Handle expo-location web subscription cleanup
+- FlightMap: Defensive checks for undefined checkpoints
+- Suppressed non-fatal console warnings (API rate limits, transient errors)
+
+### Known Limitations
+- Overpass API rate limits (429) cause some landmark lookups to fail - expected behavior
+- expo-location has internal issues on web - errors caught and handled silently
+- Map settings in SettingsContext added but UI not yet wired up
+
 ## Commands
 ```bash
 npm start          # Start Expo dev server
