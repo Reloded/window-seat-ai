@@ -86,7 +86,7 @@ class BorderCrossingService extends EventEmitter {
       this.isChecking = false;
       return crossing;
     } catch (error) {
-      console.warn('Border check failed:', error.message);
+      // Silently handle - API rate limits and transient errors are expected
       this.isChecking = false;
       return null;
     }

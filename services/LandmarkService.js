@@ -207,7 +207,7 @@ class LandmarkService {
 
       return elements;
     } catch (error) {
-      console.warn('POI query failed:', error.message);
+      // Silently handle - API rate limits (429) are expected
       return [];
     }
   }

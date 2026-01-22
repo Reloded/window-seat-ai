@@ -196,7 +196,7 @@ class LocationService extends EventEmitter {
       console.log('LocationService: Tracking stopped');
       return { success: true };
     } catch (error) {
-      console.warn('LocationService: Error stopping tracking:', error);
+      // Silently handle - expo-location web has internal cleanup issues
       this.isTracking = false;
       this.watchSubscription = null;
       return { success: true }; // Still consider it stopped
