@@ -26,6 +26,10 @@ const DEFAULT_SETTINGS = {
     theme: 'dark',          // dark, light, system
     language: 'en',         // en, es, fr, de, it, pt, ja, zh, ko
   },
+  map: {
+    offlineEnabled: true,      // Enable offline map caching
+    includeHighDetail: false,  // Include zoom level 8 (larger download)
+  },
   api: {
     claudeApiKey: '',
     elevenLabsApiKey: '',
@@ -97,6 +101,10 @@ export function SettingsProvider({ children }) {
     updateSettings('display', updates);
   }, [updateSettings]);
 
+  const updateMapSettings = useCallback((updates) => {
+    updateSettings('map', updates);
+  }, [updateSettings]);
+
   const updateApiSettings = useCallback((updates) => {
     updateSettings('api', updates);
   }, [updateSettings]);
@@ -113,6 +121,7 @@ export function SettingsProvider({ children }) {
     updateNarrationSettings,
     updateGpsSettings,
     updateDisplaySettings,
+    updateMapSettings,
     updateApiSettings,
     resetSettings,
     DEFAULT_SETTINGS,

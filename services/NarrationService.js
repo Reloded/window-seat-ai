@@ -4,6 +4,7 @@ import { elevenLabsService } from './ElevenLabsService';
 import { audioService } from './AudioService';
 import { flightDataService } from './FlightDataService';
 import { landmarkService } from './LandmarkService';
+import { mapTileService } from './MapTileService';
 import { isApiKeyConfigured } from '../config/api';
 import { routeToCheckpoints, estimateFlightDuration, formatDuration } from '../utils/routeUtils';
 
@@ -150,6 +151,27 @@ class NarrationService {
 
     pack.checkpoints = checkpoints;
 
+    // Download offline map tiles
+    if (onProgress) onProgress('Downloading offline maps...');
+    try {
+      const mapResult = await mapTileService.preCacheTilesForRoute(
+        flightData.route,
+        packId,
+        (mapProgress) => {
+          if (onProgress && mapProgress.status === 'downloading') {
+            const pct = Math.round((mapProgress.current / mapProgress.total) * 100);
+            onProgress(`Downloading maps (${pct}%)...`);
+          }
+        },
+        { includeHighDetail: false }
+      );
+      pack.hasOfflineMaps = mapResult.success;
+      pack.mapTilesDownloaded = mapResult.tilesDownloaded || mapResult.mapsDownloaded || 0;
+    } catch (error) {
+      console.warn('Map tile download failed, continuing without offline maps:', error);
+      pack.hasOfflineMaps = false;
+    }
+
     // Save to cache
     await this.saveFlightPack(pack);
     this.flightPacks.set(packId, pack);
@@ -257,6 +279,13 @@ class NarrationService {
     const packId = flightNumber.toUpperCase().replace(/\s/g, '');
     this.flightPacks.delete(packId);
 
+    // Clean up map tile cache for this flight
+    try {
+      await mapTileService.clearTileCache(packId);
+    } catch (e) {
+      console.warn('Failed to clear map tile cache:', e);
+    }
+
     // On web, clear localStorage
     if (Platform.OS === 'web') {
       try {
@@ -275,6 +304,13 @@ class NarrationService {
   async clearAllFlightPacks() {
     this.flightPacks.clear();
     this.currentFlightPack = null;
+
+    // Clear all map tile cache
+    try {
+      await mapTileService.clearAllTileCache();
+    } catch (e) {
+      console.warn('Failed to clear map tile cache:', e);
+    }
 
     // On web, clear localStorage
     if (Platform.OS === 'web') {

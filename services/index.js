@@ -9,3 +9,4 @@ export { shareService, ShareService } from './ShareService';
 export { landmarkService, LandmarkService } from './LandmarkService';
 export { sunPositionService, SunPositionService } from './SunPositionService';
 export { borderCrossingService, BorderCrossingService } from './BorderCrossingService';
+export { mapTileService, MapTileService } from './MapTileService';

@@ -1,7 +1,10 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import MapView, { Polyline, Circle, Marker } from 'react-native-maps';
+import NetInfo from '@react-native-community/netinfo';
 import { COLORS, SIZES } from './mapStyles';
+import { StaticFlightMap } from './StaticFlightMap';
+import { mapTileService } from '../../services/MapTileService';
 
 export function FlightMap({
   route = [],
@@ -10,9 +13,60 @@ export function FlightMap({
   triggeredCheckpoints = new Set(),
   isExpanded = false,
   onToggleExpand = () => {},
+  flightId = null,
+  offlineMapsEnabled = true,
   style = {},
 }) {
   const mapRef = useRef(null);
+  const [isOffline, setIsOffline] = useState(false);
+  const [hasOfflineMaps, setHasOfflineMaps] = useState(false);
+
+  // Monitor network connectivity
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOffline(!state.isConnected);
+    });
+
+    // Initial check
+    NetInfo.fetch().then((state) => {
+      setIsOffline(!state.isConnected);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Check for offline maps availability
+  useEffect(() => {
+    let mounted = true;
+
+    const checkOfflineMaps = async () => {
+      if (!flightId) {
+        setHasOfflineMaps(false);
+        return;
+      }
+
+      try {
+        const has = await mapTileService.hasOfflineMaps(flightId);
+        if (mounted) {
+          setHasOfflineMaps(has);
+        }
+      } catch (error) {
+        console.warn('Error checking offline maps:', error);
+        if (mounted) {
+          setHasOfflineMaps(false);
+        }
+      }
+    };
+
+    checkOfflineMaps();
+
+    return () => {
+      mounted = false;
+    };
+  }, [flightId]);
+
+  // Use static map when offline and offline maps are available
+  const useStaticMap = isOffline && hasOfflineMaps && offlineMapsEnabled;
 
   // Convert route to react-native-maps format
   const routeCoordinates = useMemo(() => {
@@ -64,7 +118,7 @@ export function FlightMap({
 
   // Fit map to route when it changes
   useEffect(() => {
-    if (mapRef.current && route.length > 1) {
+    if (mapRef.current && route.length > 1 && !useStaticMap) {
       const coordinates = route.map(p => ({
         latitude: p.latitude,
         longitude: p.longitude,
@@ -74,7 +128,21 @@ export function FlightMap({
         animated: true,
       });
     }
-  }, [route]);
+  }, [route, useStaticMap]);
+
+  // Render static map when offline
+  if (useStaticMap) {
+    return (
+      <StaticFlightMap
+        flightId={flightId}
+        route={route}
+        location={location}
+        isExpanded={isExpanded}
+        onToggleExpand={onToggleExpand}
+        style={style}
+      />
+    );
+  }
 
   return (
     <View style={[

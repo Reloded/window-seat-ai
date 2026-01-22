@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { MapContainer, TileLayer, Polyline, Circle, Marker, Popup, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { COLORS, SIZES, MAP_TILES, containerStyles } from './mapStyles';
 import { getCheckpointIcon, getUserLocationIcon, markerStyles } from './CheckpointMarker';
+import { CachedTileLayer, useOfflineMapStatus } from './CachedTileLayer.web';
 
 // Inject marker styles into document head
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -41,9 +42,29 @@ export function FlightMap({
   triggeredCheckpoints = new Set(),
   isExpanded = false,
   onToggleExpand = () => {},
+  flightId = null,
+  offlineMapsEnabled = true,
   style = {},
 }) {
   const mapRef = useRef(null);
+  const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' && !navigator.onLine);
+  const { hasOfflineMaps } = useOfflineMapStatus(flightId);
+
+  // Monitor online/offline status
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Convert route to Leaflet format [lat, lng]
   const routePositions = useMemo(() => {
@@ -94,10 +115,20 @@ export function FlightMap({
         zoomControl={true}
         scrollWheelZoom={true}
       >
-        <TileLayer
-          url={MAP_TILES.dark.url}
-          attribution={MAP_TILES.dark.attribution}
-        />
+        {offlineMapsEnabled && flightId ? (
+          <CachedTileLayer
+            url={MAP_TILES.dark.url}
+            attribution={MAP_TILES.dark.attribution}
+            flightId={flightId}
+            cacheEnabled={true}
+            cacheOnFetch={false}
+          />
+        ) : (
+          <TileLayer
+            url={MAP_TILES.dark.url}
+            attribution={MAP_TILES.dark.attribution}
+          />
+        )}
 
         <MapUpdater route={route} location={location} />
 
@@ -181,6 +212,13 @@ export function FlightMap({
         )}
       </MapContainer>
 
+      {/* Offline indicator */}
+      {isOffline && hasOfflineMaps && (
+        <View style={styles.offlineIndicator}>
+          <Text style={styles.offlineText}>OFFLINE</Text>
+        </View>
+      )}
+
       {/* Expand/Collapse button */}
       <TouchableOpacity
         style={styles.expandButton}
@@ -243,5 +281,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.4,
     marginTop: 4,
+  },
+  offlineIndicator: {
+    position: 'absolute',
+    bottom: 10,
+    right: 60,
+    backgroundColor: 'rgba(255, 165, 0, 0.2)',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 165, 0, 0.5)',
+  },
+  offlineText: {
+    color: '#FFA500',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
 });
