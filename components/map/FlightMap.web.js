@@ -143,7 +143,8 @@ export function FlightMap({
         )}
 
         {/* Checkpoint markers with geofence circles */}
-        {checkpoints.map((checkpoint, index) => {
+        {checkpoints.filter(Boolean).map((checkpoint, index) => {
+          if (!checkpoint?.latitude || !checkpoint?.longitude) return null;
           const position = [checkpoint.latitude, checkpoint.longitude];
           const isTriggered = triggeredCheckpoints.has(checkpoint.id) ||
                               triggeredCheckpoints.has(index);

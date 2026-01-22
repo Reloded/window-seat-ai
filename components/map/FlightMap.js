@@ -171,7 +171,8 @@ export function FlightMap({
         )}
 
         {/* Checkpoint markers with geofence circles */}
-        {checkpoints.map((checkpoint, index) => {
+        {checkpoints.filter(Boolean).map((checkpoint, index) => {
+          if (!checkpoint?.latitude || !checkpoint?.longitude) return null;
           const coordinate = {
             latitude: checkpoint.latitude,
             longitude: checkpoint.longitude,

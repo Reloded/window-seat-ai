@@ -183,7 +183,13 @@ class LocationService extends EventEmitter {
   stopTracking() {
     try {
       if (this.watchSubscription) {
-        this.watchSubscription.remove();
+        // expo-location subscriptions have a remove() method
+        if (typeof this.watchSubscription.remove === 'function') {
+          this.watchSubscription.remove();
+        } else if (typeof this.watchSubscription === 'function') {
+          // Some platforms return an unsubscribe function directly
+          this.watchSubscription();
+        }
         this.watchSubscription = null;
       }
       this.isTracking = false;
