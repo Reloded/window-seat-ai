@@ -20,6 +20,7 @@ Mobile app that narrates what you're flying over during flights. Pre-caches AI-g
 | Audio Playback | expo-audio |
 | Map (Web) | react-leaflet / Leaflet |
 | Map (Native) | react-native-maps |
+| Offline Maps | IndexedDB (web) / Static images (native) |
 | Landmark Data | OpenStreetMap (Nominatim + Overpass) |
 
 ## Core Features
@@ -27,6 +28,7 @@ Mobile app that narrates what you're flying over during flights. Pre-caches AI-g
 2. **Offline GPS Tracking:** Uses phone's internal GPS (works in airplane mode)
 3. **Geofenced Triggers:** Audio plays automatically when crossing landmarks
 4. **Rich Content:** Geological, historical, and modern facts about terrain
+5. **Offline Maps:** Map tiles cached for viewing at 35,000 feet without internet
 
 ## API Keys (Optional)
 The app works without any API keys using demo data. Add keys for full functionality:
@@ -53,8 +55,10 @@ The app works without any API keys using demo data. Add keys for full functional
     BorderCrossingAlert.js # Shows alerts when crossing country/state borders
     /map              # Map view components (platform-specific)
       index.js        # Map component exports
-      FlightMap.js    # Native map with react-native-maps
-      FlightMap.web.js    # Web map with react-leaflet
+      FlightMap.js    # Native map with react-native-maps (offline fallback)
+      FlightMap.web.js    # Web map with react-leaflet (cached tiles)
+      StaticFlightMap.js  # Native offline map using pre-rendered images
+      CachedTileLayer.web.js # Leaflet tile layer with IndexedDB caching
       CheckpointMarker.js # Native stub for markers
       CheckpointMarker.web.js # Web SVG markers using Leaflet
       mapStyles.js    # Map styling constants
@@ -103,9 +107,11 @@ The app works without any API keys using demo data. Add keys for full functional
     LandmarkService.js  # Reverse geocoding & POI lookup (OpenStreetMap)
     SunPositionService.js # Sunrise/sunset calculations and sun position
     BorderCrossingService.js # Detects country/state border crossings
+    MapTileService.js   # Offline map tile caching (IndexedDB/static images)
   /utils            # Helper functions
     index.js        # Utility exports
     geofence.ts     # Distance calc, geofence checking (TypeScript)
+    tileCalculations.ts # XYZ tile math for offline map caching
     conversions.js  # Unit conversions (m->ft, mps->kts, etc.)
     routeUtils.js   # Route-to-checkpoint conversion, ETA calc
     formatBytes.js  # Format bytes for display
@@ -134,6 +140,7 @@ The app works without any API keys using demo data. Add keys for full functional
 - [x] Mobile UI improvements (scrollable content, inline expandable sections)
 - [x] Platform-specific map components (web uses react-leaflet, native uses react-native-maps)
 - [x] Native map support with route, checkpoints, geofence circles, and user location
+- [x] Offline map tiles cached during flight pack download (IndexedDB on web, static images on native)
 
 ## Commands
 ```bash
