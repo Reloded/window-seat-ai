@@ -142,7 +142,63 @@ The app works without any API keys using demo data. Add keys for full functional
 - [x] Native map support with route, checkpoints, geofence circles, and user location
 - [x] Offline map tiles cached during flight pack download (IndexedDB on web, static images on native)
 
-## Recent Session Notes (2026-01-22)
+## Recent Session Notes (2026-01-24)
+
+### App Store Submission In Progress
+Preparing to ship Window Seat to iOS App Store and Google Play Store.
+
+#### Developer Accounts
+- **Google Play**: Account created (Vibe2Future), identity verification pending
+- **Apple Developer**: Enrollment processing ($99 paid), awaiting approval (1-2 days)
+
+#### EAS Build Configuration Complete
+- `app.json` updated with bundle IDs (`com.windowseat.app`), permissions, metadata
+- `eas.json` created with development/preview/production profiles
+- `package.json` has build scripts: `npm run build:ios`, `npm run build:android`, etc.
+- EAS project linked: `@stonku/window-seat` (ID: 3820c932-9718-4e2f-a1b0-c5ee5561254c)
+
+#### Android Builds
+- Preview build working: https://expo.dev/accounts/stonku/projects/window-seat/builds/
+- Build in progress (as of session end): 53167886-2173-42b1-9823-05ac90442c3b
+
+#### Bugs Fixed This Session
+1. **Missing dependency**: Added `@react-native-community/netinfo` (was causing build failure)
+2. **Dev build crash**: Development builds crash without Metro server - use preview builds for testing
+3. **Google Maps API key missing**: Native map crashes without API key - added fallback placeholder
+4. **Flight search z-index**: Dropdown was hidden behind content - converted to full-screen modal
+5. **Error boundaries**: Added `ErrorBoundary` component to catch crashes gracefully
+6. **Detailed logging**: Added `[Download] Step 1...2...3...` console logs for debugging
+
+#### Files Added/Modified
+- `components/ErrorBoundary.js` - New error boundary component
+- `components/map/FlightMap.js` - Added Google Maps fallback, error handling
+- `App.js` - FlightSearch now a modal, ErrorBoundary wrapping, detailed download logging
+
+### Known Issues / TODO
+- **Google Maps on Android**: Requires API key for native maps. Currently shows placeholder.
+  - To fix: Add `android.config.googleMaps.apiKey` to app.json
+  - Get key from: https://console.cloud.google.com/ → Enable "Maps SDK for Android"
+- **iOS build**: Waiting for Apple Developer enrollment approval
+- **Store listings**: Need to create app listings in App Store Connect and Play Console
+- **Privacy policy**: Required for both stores (not yet created)
+- **Screenshots**: Need app store screenshots for both platforms
+
+### Build Commands
+```bash
+# Preview build (standalone APK for testing)
+eas build --platform android --profile preview
+
+# Production build (for store submission)
+eas build --platform android --profile production
+
+# Submit to stores
+eas submit --platform android
+eas submit --platform ios
+```
+
+---
+
+## Previous Session Notes (2026-01-22)
 
 ### Offline Maps Implementation Complete
 Implemented offline map tile caching so maps work at 35,000 feet:

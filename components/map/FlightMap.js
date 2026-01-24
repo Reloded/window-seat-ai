@@ -1,10 +1,35 @@
-import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useRef, useEffect, useState, Component } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import MapView, { Polyline, Circle, Marker } from 'react-native-maps';
 import NetInfo from '@react-native-community/netinfo';
 import { COLORS, SIZES } from './mapStyles';
 import { StaticFlightMap } from './StaticFlightMap';
 import { mapTileService } from '../../services/MapTileService';
+
+// Error boundary for map component
+class MapErrorBoundary extends Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Map error:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ height: 200, backgroundColor: '#1a2a3a', borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 15 }}>
+          <Text style={{ color: '#00d4ff', fontSize: 16 }}>Map unavailable</Text>
+          <Text style={{ color: '#888', fontSize: 12, marginTop: 4 }}>Route loaded - map will show when online</Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export function FlightMap({
   route = [],
@@ -20,19 +45,42 @@ export function FlightMap({
   const mapRef = useRef(null);
   const [isOffline, setIsOffline] = useState(false);
   const [hasOfflineMaps, setHasOfflineMaps] = useState(false);
+  const [mapError, setMapError] = useState(false);
 
-  // Monitor network connectivity
+  // Monitor network connectivity - with error handling
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      setIsOffline(!state.isConnected);
-    });
+    let unsubscribe = null;
 
-    // Initial check
-    NetInfo.fetch().then((state) => {
-      setIsOffline(!state.isConnected);
-    });
+    try {
+      unsubscribe = NetInfo.addEventListener((state) => {
+        try {
+          setIsOffline(!state?.isConnected);
+        } catch (e) {
+          console.warn('NetInfo state error:', e);
+        }
+      });
 
-    return () => unsubscribe();
+      // Initial check
+      NetInfo.fetch().then((state) => {
+        try {
+          setIsOffline(!state?.isConnected);
+        } catch (e) {
+          console.warn('NetInfo fetch error:', e);
+        }
+      }).catch((e) => {
+        console.warn('NetInfo fetch failed:', e);
+      });
+    } catch (e) {
+      console.warn('NetInfo setup failed:', e);
+    }
+
+    return () => {
+      try {
+        if (unsubscribe) unsubscribe();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    };
   }, []);
 
   // Check for offline maps availability
@@ -130,21 +178,51 @@ export function FlightMap({
     }
   }, [route, useStaticMap]);
 
-  // Render static map when offline
-  if (useStaticMap) {
+  // On Android, Google Maps requires an API key - show fallback if not configured
+  // TODO: Add GOOGLE_MAPS_API_KEY to app.json android.config.googleMaps.apiKey
+  const googleMapsKeyMissing = Platform.OS === 'android';
+
+  // Show fallback if map errored or Google Maps key missing on Android
+  if (mapError || googleMapsKeyMissing) {
     return (
-      <StaticFlightMap
-        flightId={flightId}
-        route={route}
-        location={location}
-        isExpanded={isExpanded}
-        onToggleExpand={onToggleExpand}
-        style={style}
-      />
+      <View style={[styles.container, styles.collapsed, style]}>
+        <View style={styles.fallbackContainer}>
+          <Text style={styles.fallbackText}>
+            {googleMapsKeyMissing ? 'Map requires setup' : 'Map unavailable'}
+          </Text>
+          <Text style={styles.fallbackSubtext}>
+            {route.length > 0 ? `${route.length} route points loaded` : 'Route will show on web'}
+          </Text>
+          {googleMapsKeyMissing && (
+            <Text style={styles.fallbackHint}>Add Google Maps API key for native maps</Text>
+          )}
+        </View>
+      </View>
     );
   }
 
+  // Render static map when offline
+  if (useStaticMap) {
+    try {
+      return (
+        <StaticFlightMap
+          flightId={flightId}
+          route={route}
+          location={location}
+          isExpanded={isExpanded}
+          onToggleExpand={onToggleExpand}
+          style={style}
+        />
+      );
+    } catch (e) {
+      console.error('StaticFlightMap error:', e);
+      setMapError(true);
+      return null;
+    }
+  }
+
   return (
+    <MapErrorBoundary>
     <View style={[
       styles.container,
       isExpanded ? styles.expanded : styles.collapsed,
@@ -225,6 +303,7 @@ export function FlightMap({
         </Text>
       </TouchableOpacity>
     </View>
+    </MapErrorBoundary>
   );
 }
 
@@ -280,5 +359,27 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderWidth: 2,
     borderColor: COLORS.cyan,
+  },
+  fallbackContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a2a3a',
+  },
+  fallbackText: {
+    color: '#00d4ff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  fallbackSubtext: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  fallbackHint: {
+    color: '#555',
+    fontSize: 10,
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });

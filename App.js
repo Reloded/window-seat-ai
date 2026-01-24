@@ -7,9 +7,11 @@ import {
   ScrollView,
   TextInput,
   StatusBar,
+  Modal,
+  Platform,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, SunTrackerDisplay, BorderCrossingAlert, ErrorBanner, NarrationSkeleton, CheckpointListSkeleton, FlightSearch, RoutePreview, FlightMap, SettingsModal, FlightHistoryModal } from './components';
+import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, SunTrackerDisplay, BorderCrossingAlert, ErrorBanner, ErrorBoundary, NarrationSkeleton, CheckpointListSkeleton, FlightSearch, RoutePreview, FlightMap, SettingsModal, FlightHistoryModal } from './components';
 import { useLocationTracking, useSettingsSync, useTheme } from './hooks';
 import { narrationService } from './services';
 import { isApiKeyConfigured } from './config';
@@ -117,54 +119,81 @@ function AppContent() {
     setNarration(`Preparing flight pack for ${flightId}...`);
 
     try {
+      console.log('[Download] Step 1: Checking cache for', flightId);
       // Check if we have a cached pack first
-      let pack = await narrationService.loadFlightPack(flightId);
+      let pack = null;
       let fromCache = false;
+
+      try {
+        pack = await narrationService.loadFlightPack(flightId);
+      } catch (cacheError) {
+        console.warn('[Download] Cache check failed:', cacheError?.message);
+      }
 
       if (pack) {
         fromCache = true;
+        console.log('[Download] Step 2: Found cached pack');
         setNarration(`Loading cached flight pack for ${flightId}...`);
       } else {
+        console.log('[Download] Step 2: Downloading new pack');
         // Download new pack with progress updates
         pack = await narrationService.downloadFlightPack(flightId, (status) => {
+          console.log('[Download] Progress:', status);
           setNarration(`${flightId}: ${status}`);
         });
       }
 
+      console.log('[Download] Step 3: Pack received, checkpoints:', pack?.checkpoints?.length || 0);
+
       // Generate audio for checkpoints if ElevenLabs is configured
       if (narrationService.hasAudioSupport()) {
+        console.log('[Download] Step 4: Generating audio');
         setNarration(`Generating voice narrations for ${flightId}...`);
 
-        pack = await narrationService.generateFlightPackAudio(pack, (completed, total) => {
-          setDownloadProgress({ completed, total });
-          setNarration(
-            `Generating voice narrations...\n\nProgress: ${completed}/${total} checkpoints`
-          );
-        });
+        try {
+          pack = await narrationService.generateFlightPackAudio(pack, (completed, total) => {
+            setDownloadProgress({ completed, total });
+            setNarration(
+              `Generating voice narrations...\n\nProgress: ${completed}/${total} checkpoints`
+            );
+          });
+        } catch (audioError) {
+          console.warn('[Download] Audio generation failed:', audioError?.message);
+          // Continue without audio
+        }
       }
 
+      console.log('[Download] Step 5: Setting flight pack');
       narrationService.setCurrentFlightPack(pack);
-      setCheckpoints(pack.checkpoints || []);
-      setFlightRoute(pack.route || []);
-      setFlightOrigin(pack.origin || null);
-      setFlightDestination(pack.destination || null);
+
+      console.log('[Download] Step 6: Updating state');
+      setCheckpoints(pack?.checkpoints || []);
+      setFlightRoute(pack?.route || []);
+      setFlightOrigin(pack?.origin || null);
+      setFlightDestination(pack?.destination || null);
       resetTriggeredCheckpoints(); // Clear any previously triggered checkpoints
       setFlightPackReady(true);
       setDownloadProgress(null);
 
+      console.log('[Download] Step 7: Building summary');
       // Build flight info summary
       const flightInfo = narrationService.getCurrentFlightInfo();
 
       // Add to flight history
-      const hasAudio = pack.checkpoints.some(c => c.audioPath);
-      addFlightToHistory({
-        flightNumber: flightId,
-        airline: flightInfo?.airline || null,
-        origin: flightInfo?.origin || null,
-        destination: flightInfo?.destination || null,
-        checkpointCount: pack.checkpoints.length,
-        hasAudio,
-      });
+      const hasAudio = pack?.checkpoints?.some(c => c.audioPath) || false;
+      try {
+        addFlightToHistory({
+          flightNumber: flightId,
+          airline: flightInfo?.airline || null,
+          origin: flightInfo?.origin || null,
+          destination: flightInfo?.destination || null,
+          checkpointCount: pack?.checkpoints?.length || 0,
+          hasAudio,
+        });
+      } catch (historyError) {
+        console.warn('[Download] Failed to add to history:', historyError?.message);
+      }
+
       const routeText = flightInfo?.origin?.name && flightInfo?.destination?.name
         ? `${flightInfo.origin.name} → ${flightInfo.destination.name}`
         : 'Route loaded';
@@ -184,16 +213,19 @@ function AppContent() {
 
       const cacheText = fromCache ? ' (cached)' : '';
 
+      console.log('[Download] Step 8: Complete!');
       setNarration(
         `Flight pack ready!${cacheText}\n\n` +
         `${routeText}\n` +
         `${durationText ? durationText + '\n' : ''}` +
-        `${pack.checkpoints.length} checkpoints\n\n` +
+        `${pack?.checkpoints?.length || 0} checkpoints\n\n` +
         `${featureText}\n\n` +
         `You can now enable Airplane Mode. GPS tracking will trigger narrations as you fly.`
       );
     } catch (err) {
-      setNarration(`Failed to download flight pack: ${err.message}`);
+      console.error('[Download] CRASH:', err);
+      console.error('[Download] Stack:', err?.stack);
+      setNarration(`Failed to download flight pack: ${err?.message || 'Unknown error'}\n\nCheck console for details.`);
       setDownloadProgress(null);
     } finally {
       setIsLoading(false);
@@ -334,7 +366,7 @@ function AppContent() {
               accessibilityRole="button"
               accessibilityState={{ expanded: searchVisible }}
             >
-              <Text style={themedStyles.browseBtnText}>{searchVisible ? '▲' : '▼'}</Text>
+              <Text style={themedStyles.browseBtnText}>{searchVisible ? '−' : '+'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={themedStyles.previewBtn}
@@ -358,35 +390,20 @@ function AppContent() {
             </TouchableOpacity>
           </View>
 
-          {/* Flight Search Browser */}
-          {searchVisible && (
-            <View style={styles.searchContainer}>
-              <FlightSearch
-                onSelectFlight={(flight) => {
-                  setFlightNumber(flight);
-                  setSearchVisible(false);
-                  // Add to recent searches
-                  setRecentSearches(prev => {
-                    const filtered = prev.filter(s => s !== flight);
-                    return [flight, ...filtered].slice(0, 5);
-                  });
-                }}
-                recentSearches={recentSearches}
-              />
-            </View>
-          )}
         </View>
 
-        {/* Map View */}
+        {/* Map View - wrapped in try/catch via error boundary */}
         {flightPackReady && (
-          <FlightMap
-            route={flightRoute}
-            checkpoints={checkpoints}
-            location={location}
-            triggeredCheckpoints={triggeredCheckpoints}
-            isExpanded={mapExpanded}
-            onToggleExpand={() => setMapExpanded(!mapExpanded)}
-          />
+          <ErrorBoundary>
+            <FlightMap
+              route={flightRoute}
+              checkpoints={checkpoints}
+              location={location}
+              triggeredCheckpoints={triggeredCheckpoints}
+              isExpanded={mapExpanded}
+              onToggleExpand={() => setMapExpanded(!mapExpanded)}
+            />
+          </ErrorBoundary>
         )}
 
         {/* Flight Progress Bar */}
@@ -518,6 +535,41 @@ function AppContent() {
         onClose={() => setPreviewVisible(false)}
         onDownload={downloadFlightPack}
       />
+
+      {/* Flight Search Modal */}
+      <Modal
+        visible={searchVisible}
+        animationType="slide"
+        presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'fullScreen'}
+        onRequestClose={() => setSearchVisible(false)}
+        statusBarTranslucent={Platform.OS === 'android'}
+      >
+        <View style={styles.searchModalContainer}>
+          <View style={styles.searchModalHeader}>
+            <TouchableOpacity
+              onPress={() => setSearchVisible(false)}
+              style={styles.searchModalCloseBtn}
+            >
+              <Text style={styles.searchModalCloseBtnText}>Close</Text>
+            </TouchableOpacity>
+            <Text style={styles.searchModalTitle}>Browse Flights</Text>
+            <View style={styles.searchModalPlaceholder} />
+          </View>
+          <FlightSearch
+            onSelectFlight={(flight) => {
+              setFlightNumber(flight);
+              setSearchVisible(false);
+              // Add to recent searches
+              setRecentSearches(prev => {
+                const filtered = prev.filter(s => s !== flight);
+                return [flight, ...filtered].slice(0, 5);
+              });
+            }}
+            recentSearches={recentSearches}
+            style={styles.searchModalContent}
+          />
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -525,11 +577,13 @@ function AppContent() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <SettingsProvider>
-        <FlightHistoryProvider>
-          <AppContent />
-        </FlightHistoryProvider>
-      </SettingsProvider>
+      <ErrorBoundary>
+        <SettingsProvider>
+          <FlightHistoryProvider>
+            <AppContent />
+          </FlightHistoryProvider>
+        </SettingsProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }
@@ -658,12 +712,37 @@ const styles = StyleSheet.create({
     color: '#0a1628',
     fontWeight: 'bold',
   },
-  searchContainer: {
-    marginTop: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 12,
-    padding: 12,
-    maxHeight: 350,
+  searchModalContainer: {
+    flex: 1,
+    backgroundColor: '#0a1628',
+  },
+  searchModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  searchModalCloseBtn: {
+    padding: 8,
+  },
+  searchModalCloseBtnText: {
+    color: '#00d4ff',
+    fontSize: 16,
+  },
+  searchModalTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  searchModalPlaceholder: {
+    width: 50,
+  },
+  searchModalContent: {
+    flex: 1,
+    padding: 16,
   },
   narrationContainer: {
     backgroundColor: '#0d1e33',

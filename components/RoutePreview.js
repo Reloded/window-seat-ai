@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Modal,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { flightDataService, narrationService } from '../services';
 
@@ -38,21 +39,28 @@ export function RoutePreview({ flightNumber, visible, onClose, onDownload }) {
       }
 
       // Generate checkpoint locations (without full narrations)
-      const checkpointLocations = await narrationService.getCheckpointLocationsOnly(
-        flightData.route,
-        flightNumber
-      );
+      let checkpointLocations = [];
+      try {
+        checkpointLocations = await narrationService.getCheckpointLocationsOnly(
+          flightData.route,
+          flightNumber
+        );
+      } catch (checkpointError) {
+        console.warn('Failed to generate checkpoint locations:', checkpointError);
+        // Continue without checkpoints - they'll be generated during download
+      }
 
       setRouteData({
         flightNumber,
-        origin: flightData.origin,
-        destination: flightData.destination,
+        origin: flightData.origin || { code: '???', name: 'Unknown' },
+        destination: flightData.destination || { code: '???', name: 'Unknown' },
         route: flightData.route,
         estimatedDuration: flightData.estimatedDuration,
-        checkpoints: checkpointLocations,
+        checkpoints: checkpointLocations || [],
       });
     } catch (err) {
-      setError(err.message || 'Failed to load route preview');
+      console.error('Route preview error:', err);
+      setError(err?.message || 'Failed to load route preview');
     } finally {
       setLoading(false);
     }
@@ -69,8 +77,9 @@ export function RoutePreview({ flightNumber, visible, onClose, onDownload }) {
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'fullScreen'}
       onRequestClose={onClose}
+      statusBarTranslucent={Platform.OS === 'android'}
     >
       <View style={styles.container}>
         {/* Header */}

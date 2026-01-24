@@ -151,25 +151,31 @@ class NarrationService {
 
     pack.checkpoints = checkpoints;
 
-    // Download offline map tiles
+    // Download offline map tiles (optional - don't fail if this doesn't work)
     if (onProgress) onProgress('Downloading offline maps...');
     try {
-      const mapResult = await mapTileService.preCacheTilesForRoute(
-        flightData.route,
-        packId,
-        (mapProgress) => {
-          if (onProgress && mapProgress.status === 'downloading') {
-            const pct = Math.round((mapProgress.current / mapProgress.total) * 100);
-            onProgress(`Downloading maps (${pct}%)...`);
-          }
-        },
-        { includeHighDetail: false }
-      );
-      pack.hasOfflineMaps = mapResult.success;
-      pack.mapTilesDownloaded = mapResult.tilesDownloaded || mapResult.mapsDownloaded || 0;
+      if (flightData.route && flightData.route.length >= 2) {
+        const mapResult = await mapTileService.preCacheTilesForRoute(
+          flightData.route,
+          packId,
+          (mapProgress) => {
+            if (onProgress && mapProgress && mapProgress.status === 'downloading') {
+              const pct = Math.round((mapProgress.current / mapProgress.total) * 100);
+              onProgress(`Downloading maps (${pct}%)...`);
+            }
+          },
+          { includeHighDetail: false }
+        );
+        pack.hasOfflineMaps = mapResult?.success || false;
+        pack.mapTilesDownloaded = mapResult?.tilesDownloaded || mapResult?.mapsDownloaded || 0;
+      } else {
+        console.warn('Skipping map download - invalid route');
+        pack.hasOfflineMaps = false;
+      }
     } catch (error) {
-      console.warn('Map tile download failed, continuing without offline maps:', error);
+      console.warn('Map tile download failed, continuing without offline maps:', error?.message || error);
       pack.hasOfflineMaps = false;
+      pack.mapTilesDownloaded = 0;
     }
 
     // Save to cache

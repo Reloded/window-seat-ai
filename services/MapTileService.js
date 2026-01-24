@@ -357,6 +357,12 @@ class MapTileService {
       return { success: false, error: 'Not supported on web' };
     }
 
+    // Validate route before proceeding
+    if (!route || !Array.isArray(route) || route.length < 2) {
+      console.warn('MapTileService: Invalid route for static maps');
+      return { success: false, error: 'Invalid route', mapsDownloaded: 0 };
+    }
+
     const flightCacheDir = `${MAP_CACHE_DIR}${flightId}/`;
 
     try {
@@ -368,6 +374,12 @@ class MapTileService {
 
       const center = getRouteCenter(route);
       const bounds = getRouteBounds(route, 0);
+
+      // Validate center coordinates
+      if (!center || typeof center.latitude !== 'number' || typeof center.longitude !== 'number') {
+        console.warn('MapTileService: Invalid route center');
+        return { success: false, error: 'Invalid route center', mapsDownloaded: 0 };
+      }
       const results = [];
 
       const mapConfigs = [
@@ -391,9 +403,15 @@ class MapTileService {
           const filePath = `${flightCacheDir}${config.name}.png`;
           const url = this.buildStaticMapUrl(route, center, config);
 
-          const downloadResult = await FileSystem.downloadAsync(url, filePath);
+          // Set a timeout for the download
+          const downloadPromise = FileSystem.downloadAsync(url, filePath);
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Download timeout')), 30000)
+          );
 
-          if (downloadResult.status === 200) {
+          const downloadResult = await Promise.race([downloadPromise, timeoutPromise]);
+
+          if (downloadResult && downloadResult.status === 200) {
             results.push({
               name: config.name,
               filePath,
@@ -401,21 +419,21 @@ class MapTileService {
             });
             downloaded++;
           } else {
-            // If download fails, create a placeholder indicating offline map
+            // If download fails, continue without crashing
             results.push({
               name: config.name,
               filePath: null,
               success: false,
-              error: `HTTP ${downloadResult.status}`,
+              error: downloadResult ? `HTTP ${downloadResult.status}` : 'No response',
             });
           }
         } catch (error) {
-          console.warn(`Failed to download ${config.name} map:`, error);
+          console.warn(`Failed to download ${config.name} map:`, error?.message || error);
           results.push({
             name: config.name,
             filePath: null,
             success: false,
-            error: error.message,
+            error: error?.message || 'Download failed',
           });
         }
       }
