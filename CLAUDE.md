@@ -264,3 +264,33 @@ These flights work without API keys (mock routes):
 - **QF12** - Los Angeles (LAX) → Sydney (SYD)
 
 You can also enter airport pairs like `LAX-SFO` or `JFK-LAX` for custom demo routes.
+
+## AI Agents Library
+
+Specialized agent configurations are available in `.claude/agents-library/`. Use these personas when working on specific tasks:
+
+### Relevant Agents for This Project
+
+| Agent | Path | Use For |
+|-------|------|---------|
+| Mobile App Builder | `engineering/mobile-app-builder.md` | React Native/Expo development, app store submission |
+| Project Shipper | `project-management/project-shipper.md` | Release planning, launch checklists |
+| DevOps Automator | `engineering/devops-automator.md` | CI/CD, EAS Build configuration |
+| Performance Benchmarker | `testing/performance-benchmarker.md` | App performance optimization |
+| API Tester | `testing/api-tester.md` | Testing Claude/ElevenLabs integrations |
+
+### How to Use
+
+Reference an agent by reading its file and adopting its persona:
+```
+Read .claude/agents-library/engineering/mobile-app-builder.md and use that expertise to help with [task]
+```
+
+### All Available Categories
+- `engineering/` - 6 agents (frontend, backend, mobile, AI, DevOps, prototyping)
+- `product/` - 3 agents (research, feedback, prioritization)
+- `marketing/` - 7 agents (social, content, growth)
+- `design/` - 5 agents (UI/UX, branding, visual)
+- `project-management/` - 3 agents (shipping, coordination)
+- `studio-operations/` - 5 agents (support, analytics, compliance)
+- `testing/` - 5 agents (QA, API, performance)
