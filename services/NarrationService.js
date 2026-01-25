@@ -8,7 +8,15 @@ import { landmarkService } from './LandmarkService';
 import { mapTileService } from './MapTileService';
 import { isApiKeyConfigured } from '../config/api';
 import { routeToCheckpoints, estimateFlightDuration, formatDuration } from '../utils/routeUtils';
-import { findNarrationForCheckpoint } from '../data/landmarkNarrations';
+// Import pre-written narrations (defensive import)
+let findNarrationForCheckpoint;
+try {
+  const narrations = require('../data/landmarkNarrations');
+  findNarrationForCheckpoint = narrations.findNarrationForCheckpoint;
+} catch (error) {
+  console.warn('Failed to load landmark narrations:', error.message);
+  findNarrationForCheckpoint = () => "We're cruising at altitude, enjoying the view below.";
+}
 
 // Only import FileSystem on native platforms
 let FileSystem = null;
