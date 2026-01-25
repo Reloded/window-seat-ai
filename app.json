@@ -13,16 +13,17 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "bundleIdentifier": "com.windowseat.app",
-      "buildNumber": "1",
+      "bundleIdentifier": "com.stonku.windowseat",
+      "buildNumber": "2",
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Window Seat uses your location to show what you're flying over",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Window Seat uses your location to narrate landmarks during your flight"
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Window Seat uses your location to narrate landmarks during your flight",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.windowseat.app",
+      "package": "com.stonku.windowseat",
       "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

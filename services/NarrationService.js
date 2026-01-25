@@ -1,12 +1,14 @@
 import { Platform } from 'react-native';
 import { claudeService } from './ClaudeService';
 import { elevenLabsService } from './ElevenLabsService';
+import { freeTTSService } from './FreeTTSService';
 import { audioService } from './AudioService';
 import { flightDataService } from './FlightDataService';
 import { landmarkService } from './LandmarkService';
 import { mapTileService } from './MapTileService';
 import { isApiKeyConfigured } from '../config/api';
 import { routeToCheckpoints, estimateFlightDuration, formatDuration } from '../utils/routeUtils';
+import { findNarrationForCheckpoint } from '../data/landmarkNarrations';
 
 // Only import FileSystem on native platforms
 let FileSystem = null;
@@ -186,14 +188,8 @@ class NarrationService {
   }
 
   getDefaultNarration(checkpoint) {
-    switch (checkpoint.type) {
-      case 'departure':
-        return "We've just departed and are climbing to cruise altitude. Below you can see the landscape transitioning as we gain height.";
-      case 'arrival':
-        return "We're beginning our descent towards our destination. You may notice the landscape becoming more detailed as we descend.";
-      default:
-        return "We're cruising at altitude. The landscape below tells a story of geological and human history spanning millions of years.";
-    }
+    // Use pre-written National Geographic style narrations
+    return findNarrationForCheckpoint(checkpoint);
   }
 
   async saveFlightPack(pack) {
@@ -504,28 +500,35 @@ class NarrationService {
   }
 
   async playCheckpointAudio(checkpoint) {
+    // Try pre-generated audio first (ElevenLabs)
     if (checkpoint.audioPath) {
       return await audioService.playUri(checkpoint.audioPath);
     }
+    
+    // Fall back to free device TTS
+    if (checkpoint.narration) {
+      return await freeTTSService.speakCheckpoint(checkpoint);
+    }
+    
     return false;
   }
 
   async playCurrentNarration(narrationText) {
-    // For live narrations, generate and play audio on the fly
-    if (!isApiKeyConfigured('elevenLabs')) {
-      return false;
+    // Try ElevenLabs first if configured
+    if (isApiKeyConfigured('elevenLabs')) {
+      try {
+        const filePath = await elevenLabsService.generateAndSaveAudio(
+          narrationText,
+          `live_${Date.now()}`
+        );
+        return await audioService.playUri(filePath);
+      } catch (error) {
+        console.error('ElevenLabs failed, falling back to device TTS:', error);
+      }
     }
 
-    try {
-      const filePath = await elevenLabsService.generateAndSaveAudio(
-        narrationText,
-        `live_${Date.now()}`
-      );
-      return await audioService.playUri(filePath);
-    } catch (error) {
-      console.error('Failed to play live narration:', error);
-      return false;
-    }
+    // Fall back to free device TTS
+    return await freeTTSService.speak(narrationText);
   }
 
   pauseAudio() {
@@ -537,6 +540,8 @@ class NarrationService {
   }
 
   stopAudio() {
+    // Stop both audio service and free TTS
+    freeTTSService.stop();
     return audioService.stop();
   }
 
@@ -549,7 +554,36 @@ class NarrationService {
   }
 
   hasAudioSupport() {
+    // Always true now - we have free device TTS as fallback!
+    return true;
+  }
+
+  /**
+   * Check if premium (ElevenLabs) audio is available
+   */
+  hasPremiumAudio() {
     return isApiKeyConfigured('elevenLabs');
+  }
+
+  /**
+   * Use free device TTS for a checkpoint
+   */
+  async speakCheckpointFree(checkpoint) {
+    return await freeTTSService.speakCheckpoint(checkpoint);
+  }
+
+  /**
+   * Use free device TTS for text
+   */
+  async speakTextFree(text) {
+    return await freeTTSService.speak(text);
+  }
+
+  /**
+   * Stop free TTS
+   */
+  async stopFreeTTS() {
+    return await freeTTSService.stop();
   }
 
   // Queue playback methods

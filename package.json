@@ -29,6 +29,7 @@
     "expo-file-system": "~19.0.21",
     "expo-location": "~19.0.8",
     "expo-sharing": "~14.0.8",
+    "expo-speech": "~14.0.8",
     "expo-status-bar": "~3.0.9",
     "leaflet": "^1.9.4",
     "react": "19.1.0",

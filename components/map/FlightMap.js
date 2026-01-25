@@ -178,9 +178,9 @@ export function FlightMap({
     }
   }, [route, useStaticMap]);
 
-  // On Android, Google Maps requires an API key - show fallback if not configured
-  // TODO: Add GOOGLE_MAPS_API_KEY to app.json android.config.googleMaps.apiKey
-  const googleMapsKeyMissing = Platform.OS === 'android';
+  // On Android, Google Maps requires an API key - but let's try rendering anyway
+  // The map component will handle errors gracefully via the error boundary
+  const googleMapsKeyMissing = false; // Let it try - error boundary will catch failures
 
   // Show fallback if map errored or Google Maps key missing on Android
   if (mapError || googleMapsKeyMissing) {

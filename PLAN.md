@@ -39,8 +39,13 @@
 - [x] Retry logic for flaky API calls
 - [x] Accessibility (a11y) improvements
 
-## Phase 4: New Features ← NEXT
-- [ ] Flight search/browse instead of typing numbers
+## Phase 4: New Features ← IN PROGRESS
+- [x] Flight search/browse instead of typing numbers
+  - 50+ demo flights organized by region (Transatlantic, Europe, Asia-Pacific, Americas, Middle East)
+  - 30+ custom routes with country flags
+  - Scenic flights highlighted (glaciers, oceans, longest routes)
+  - Regional filter tabs for easy browsing
+  - Recent searches preserved
 - [ ] Route preview before downloading
 - [ ] Dark/light mode toggle
 - [ ] Multi-language narrations
