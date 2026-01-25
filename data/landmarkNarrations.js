@@ -4,7 +4,7 @@
  * Styled like National Geographic documentaries
  */
 
-export const LANDMARK_NARRATIONS = {
+const LANDMARK_NARRATIONS = {
   // Major Cities
   'london': {
     name: 'London',
@@ -137,7 +137,7 @@ export const LANDMARK_NARRATIONS = {
  * @param {string} key - Landmark key or type
  * @returns {object|null} - Narration object or null
  */
-export function getLandmarkNarration(key) {
+function getLandmarkNarration(key) {
   if (!key) return null;
   
   const normalizedKey = key.toLowerCase()
@@ -153,7 +153,7 @@ export function getLandmarkNarration(key) {
  * @param {object} checkpoint - Checkpoint with name, type, or landmark info
  * @returns {string} - Best matching narration text
  */
-export function findNarrationForCheckpoint(checkpoint) {
+function findNarrationForCheckpoint(checkpoint) {
   if (!checkpoint) {
     return LANDMARK_NARRATIONS.cruise.narration;
   }
@@ -188,4 +188,9 @@ export function findNarrationForCheckpoint(checkpoint) {
   return LANDMARK_NARRATIONS.cruise.narration;
 }
 
-export default LANDMARK_NARRATIONS;
+// CommonJS exports for React Native compatibility
+module.exports = {
+  LANDMARK_NARRATIONS,
+  getLandmarkNarration,
+  findNarrationForCheckpoint,
+};

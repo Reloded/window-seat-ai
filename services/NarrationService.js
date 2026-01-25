@@ -8,15 +8,8 @@ import { landmarkService } from './LandmarkService';
 import { mapTileService } from './MapTileService';
 import { isApiKeyConfigured } from '../config/api';
 import { routeToCheckpoints, estimateFlightDuration, formatDuration } from '../utils/routeUtils';
-// Import pre-written narrations (defensive import)
-let findNarrationForCheckpoint;
-try {
-  const narrations = require('../data/landmarkNarrations');
-  findNarrationForCheckpoint = narrations.findNarrationForCheckpoint;
-} catch (error) {
-  console.warn('Failed to load landmark narrations:', error.message);
-  findNarrationForCheckpoint = () => "We're cruising at altitude, enjoying the view below.";
-}
+// Import pre-written narrations
+const landmarkNarrations = require('../data/landmarkNarrations');
 
 // Only import FileSystem on native platforms
 let FileSystem = null;
@@ -197,7 +190,15 @@ class NarrationService {
 
   getDefaultNarration(checkpoint) {
     // Use pre-written National Geographic style narrations
-    return findNarrationForCheckpoint(checkpoint);
+    try {
+      if (landmarkNarrations?.findNarrationForCheckpoint) {
+        return landmarkNarrations.findNarrationForCheckpoint(checkpoint);
+      }
+    } catch (error) {
+      console.warn('Failed to get landmark narration:', error);
+    }
+    // Fallback narration
+    return "We're cruising at altitude. The landscape below tells a story of geological and human history spanning millions of years.";
   }
 
   async saveFlightPack(pack) {
