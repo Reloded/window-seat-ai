@@ -1,5 +1,12 @@
-import * as Speech from 'expo-speech';
 import { Platform } from 'react-native';
+
+// Lazy load expo-speech to prevent crashes if native module isn't available
+let Speech = null;
+try {
+  Speech = require('expo-speech');
+} catch (error) {
+  console.warn('expo-speech not available:', error.message);
+}
 
 /**
  * Free TTS Service using device's built-in text-to-speech
@@ -9,6 +16,7 @@ class FreeTTSService {
   constructor() {
     this.isSpeaking = false;
     this.currentUtterance = null;
+    this.speechAvailable = !!Speech;
     this.voiceSettings = {
       language: 'en-US',
       pitch: 1.0,
@@ -22,6 +30,7 @@ class FreeTTSService {
    * Check if TTS is available on this device
    */
   async isAvailable() {
+    if (!this.speechAvailable) return false;
     try {
       const voices = await Speech.getAvailableVoicesAsync();
       return voices && voices.length > 0;
@@ -32,16 +41,17 @@ class FreeTTSService {
   }
 
   /**
-   * Always returns true - device TTS is free!
+   * Returns true if speech module is available
    */
   isConfigured() {
-    return true;
+    return this.speechAvailable;
   }
 
   /**
    * Get available voices on this device
    */
   async getVoices() {
+    if (!this.speechAvailable) return [];
     try {
       const voices = await Speech.getAvailableVoicesAsync();
       // Filter to English voices and sort by quality
@@ -81,7 +91,7 @@ class FreeTTSService {
    * Speak text using device TTS
    */
   async speak(text, options = {}) {
-    if (!text || text.trim().length === 0) {
+    if (!this.speechAvailable || !text || text.trim().length === 0) {
       return false;
     }
 
@@ -130,7 +140,7 @@ class FreeTTSService {
    * Stop current speech
    */
   async stop() {
-    if (this.isSpeaking) {
+    if (this.isSpeaking && this.speechAvailable) {
       await Speech.stop();
       this.isSpeaking = false;
       this.notifyListeners('stopped');
@@ -141,6 +151,7 @@ class FreeTTSService {
    * Pause speech (note: not supported on all platforms)
    */
   async pause() {
+    if (!this.speechAvailable) return;
     if (Platform.OS === 'ios') {
       await Speech.pause();
       this.notifyListeners('paused');
@@ -154,6 +165,7 @@ class FreeTTSService {
    * Resume speech (note: not supported on all platforms)
    */
   async resume() {
+    if (!this.speechAvailable) return;
     if (Platform.OS === 'ios') {
       await Speech.resume();
       this.notifyListeners('resumed');
@@ -164,6 +176,7 @@ class FreeTTSService {
    * Check if currently speaking
    */
   async isSpeakingAsync() {
+    if (!this.speechAvailable) return false;
     return await Speech.isSpeakingAsync();
   }
 
