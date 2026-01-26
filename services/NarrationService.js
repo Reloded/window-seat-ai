@@ -12,8 +12,12 @@ import { routeToCheckpoints, estimateFlightDuration, formatDuration } from '../u
 let FileSystem = null;
 let NARRATION_CACHE_DIR = '';
 if (Platform.OS !== 'web') {
-  FileSystem = require('expo-file-system/legacy');
-  NARRATION_CACHE_DIR = `${FileSystem.documentDirectory}narrations/`;
+  try {
+    FileSystem = require('expo-file-system');
+    NARRATION_CACHE_DIR = `${FileSystem.documentDirectory}narrations/`;
+  } catch (e) {
+    console.warn('expo-file-system not available:', e.message);
+  }
 }
 
 class NarrationService {
