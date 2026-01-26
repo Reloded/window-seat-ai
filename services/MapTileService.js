@@ -10,13 +10,10 @@ import {
 } from '../utils/tileCalculations';
 import { MAP_TILES } from '../components/map/mapStyles';
 
-// Only import FileSystem on native platforms
+// FileSystem caching temporarily disabled due to expo-file-system API changes
+// TODO: Migrate to new expo-file-system File/Directory API
 let FileSystem = null;
 let MAP_CACHE_DIR = '';
-if (Platform.OS !== 'web') {
-  FileSystem = require('expo-file-system/legacy');
-  MAP_CACHE_DIR = `${FileSystem.documentDirectory}map_tiles/`;
-}
 
 // IndexedDB database name and store for web
 const IDB_NAME = 'WindowSeatMapTiles';

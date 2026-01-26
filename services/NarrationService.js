@@ -8,17 +8,10 @@ import { mapTileService } from './MapTileService';
 import { isApiKeyConfigured } from '../config/api';
 import { routeToCheckpoints, estimateFlightDuration, formatDuration } from '../utils/routeUtils';
 
-// Only import FileSystem on native platforms
+// FileSystem caching temporarily disabled due to expo-file-system API changes
+// TODO: Migrate to new expo-file-system File/Directory API
 let FileSystem = null;
 let NARRATION_CACHE_DIR = '';
-if (Platform.OS !== 'web') {
-  try {
-    FileSystem = require('expo-file-system');
-    NARRATION_CACHE_DIR = `${FileSystem.documentDirectory}narrations/`;
-  } catch (e) {
-    console.warn('expo-file-system not available:', e.message);
-  }
-}
 
 class NarrationService {
   constructor() {

@@ -4,13 +4,10 @@ import { withRetry, isRetryableStatus } from '../utils/retry';
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 
-// Only import FileSystem on native platforms
+// FileSystem caching temporarily disabled due to expo-file-system API changes
+// TODO: Migrate to new expo-file-system File/Directory API
 let FileSystem = null;
 let AUDIO_CACHE_DIR = '';
-if (Platform.OS !== 'web') {
-  FileSystem = require('expo-file-system/legacy');
-  AUDIO_CACHE_DIR = `${FileSystem.documentDirectory}audio/`;
-}
 
 class ElevenLabsService {
   constructor() {
