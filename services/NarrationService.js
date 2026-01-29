@@ -181,7 +181,8 @@ class NarrationService {
     }
 
     // Generate audio for narrations if ElevenLabs is configured
-    if (isApiKeyConfigured('elevenLabs')) {
+    // Use elevenLabsService.isConfigured() to check runtime config (set via Settings)
+    if (elevenLabsService.isConfigured()) {
       if (onProgress) onProgress('Generating voice narrations...');
       try {
         const audioResult = await this.generateFlightPackAudio(pack, (done, total) => {
@@ -193,6 +194,7 @@ class NarrationService {
         pack.hasAudio = false;
       }
     } else {
+      console.log('[NarrationService] ElevenLabs not configured, skipping audio generation');
       pack.hasAudio = false;
     }
 
