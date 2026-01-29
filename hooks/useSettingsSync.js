@@ -62,4 +62,16 @@ export function useSettingsSync() {
       language: settings.display?.language || 'en',
     });
   }, [isLoaded, settings.display?.language]);
+
+  // Sync API keys to services
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    if (settings.api?.claudeApiKey) {
+      claudeService.updateApiKey(settings.api.claudeApiKey);
+    }
+    if (settings.api?.elevenLabsApiKey) {
+      elevenLabsService.updateApiKey(settings.api.elevenLabsApiKey);
+    }
+  }, [isLoaded, settings.api?.claudeApiKey, settings.api?.elevenLabsApiKey]);
 }

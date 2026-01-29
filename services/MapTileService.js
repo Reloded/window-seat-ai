@@ -1,4 +1,6 @@
 import { Platform } from 'react-native';
+import { File, Directory, Paths } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system';
 import {
   getTilesForRoute,
   getTileUrl,
@@ -10,10 +12,8 @@ import {
 } from '../utils/tileCalculations';
 import { MAP_TILES } from '../components/map/mapStyles';
 
-// FileSystem caching temporarily disabled due to expo-file-system API changes
-// TODO: Migrate to new expo-file-system File/Directory API
-let FileSystem = null;
-let MAP_CACHE_DIR = '';
+// Map cache directory using new expo-file-system API
+let mapCacheDir = null;
 
 // IndexedDB database name and store for web
 const IDB_NAME = 'WindowSeatMapTiles';
@@ -43,14 +43,18 @@ class MapTileService {
   }
 
   async ensureCacheDir() {
-    if (Platform.OS === 'web' || !FileSystem) return;
+    if (Platform.OS === 'web') return null;
     try {
-      const dirInfo = await FileSystem.getInfoAsync(MAP_CACHE_DIR);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(MAP_CACHE_DIR, { intermediates: true });
+      if (!mapCacheDir) {
+        mapCacheDir = new Directory(Paths.cache, 'maptiles');
+        if (!mapCacheDir.exists) {
+          mapCacheDir.create();
+        }
       }
+      return mapCacheDir;
     } catch (error) {
       console.error('Failed to create map cache directory:', error);
+      return null;
     }
   }
 
@@ -350,7 +354,7 @@ class MapTileService {
   // ============================================
 
   async downloadStaticMaps(route, flightId, onProgress, options = {}) {
-    if (Platform.OS === 'web' || !FileSystem) {
+    if (Platform.OS === 'web') {
       return { success: false, error: 'Not supported on web' };
     }
 
@@ -360,14 +364,18 @@ class MapTileService {
       return { success: false, error: 'Invalid route', mapsDownloaded: 0 };
     }
 
-    const flightCacheDir = `${MAP_CACHE_DIR}${flightId}/`;
+    const cacheDir = await this.ensureCacheDir();
+    if (!cacheDir) {
+      return { success: false, error: 'Cache not available', mapsDownloaded: 0 };
+    }
+
+    // Create flight-specific directory
+    const flightCacheDir = new Directory(cacheDir, flightId);
+    if (!flightCacheDir.exists) {
+      flightCacheDir.create();
+    }
 
     try {
-      // Ensure flight-specific directory exists
-      const dirInfo = await FileSystem.getInfoAsync(flightCacheDir);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(flightCacheDir, { intermediates: true });
-      }
 
       const center = getRouteCenter(route);
       const bounds = getRouteBounds(route, 0);
@@ -397,7 +405,8 @@ class MapTileService {
         }
 
         try {
-          const filePath = `${flightCacheDir}${config.name}.png`;
+          const file = new File(flightCacheDir, `${config.name}.png`);
+          const filePath = file.uri;
           const url = this.buildStaticMapUrl(route, center, config);
 
           // Set a timeout for the download
@@ -445,10 +454,8 @@ class MapTileService {
         maps: results,
       };
 
-      await FileSystem.writeAsStringAsync(
-        `${flightCacheDir}metadata.json`,
-        JSON.stringify(metadata)
-      );
+      const metadataFile = new File(flightCacheDir, 'metadata.json');
+      metadataFile.write(JSON.stringify(metadata));
 
       if (onProgress) {
         onProgress({
@@ -512,14 +519,16 @@ class MapTileService {
   }
 
   async getStaticMapPath(flightId, mapName = 'overview') {
-    if (Platform.OS === 'web' || !FileSystem) return null;
+    if (Platform.OS === 'web') return null;
 
-    const filePath = `${MAP_CACHE_DIR}${flightId}/${mapName}.png`;
+    const cacheDir = await this.ensureCacheDir();
+    if (!cacheDir) return null;
 
     try {
-      const info = await FileSystem.getInfoAsync(filePath);
-      if (info.exists) {
-        return filePath;
+      const flightDir = new Directory(cacheDir, flightId);
+      const file = new File(flightDir, `${mapName}.png`);
+      if (file.exists) {
+        return file.uri;
       }
     } catch (error) {
       console.warn('Error checking static map path:', error);
@@ -529,14 +538,16 @@ class MapTileService {
   }
 
   async getStaticMapMetadata(flightId) {
-    if (Platform.OS === 'web' || !FileSystem) return null;
+    if (Platform.OS === 'web') return null;
 
-    const metadataPath = `${MAP_CACHE_DIR}${flightId}/metadata.json`;
+    const cacheDir = await this.ensureCacheDir();
+    if (!cacheDir) return null;
 
     try {
-      const info = await FileSystem.getInfoAsync(metadataPath);
-      if (info.exists) {
-        const content = await FileSystem.readAsStringAsync(metadataPath);
+      const flightDir = new Directory(cacheDir, flightId);
+      const metadataFile = new File(flightDir, 'metadata.json');
+      if (metadataFile.exists) {
+        const content = metadataFile.text();
         return JSON.parse(content);
       }
     } catch (error) {
@@ -555,44 +566,18 @@ class MapTileService {
       return this.getDBCacheSize();
     }
 
-    if (!FileSystem) return 0;
-
     try {
-      const baseDir = flightId ? `${MAP_CACHE_DIR}${flightId}/` : MAP_CACHE_DIR;
-      const dirInfo = await FileSystem.getInfoAsync(baseDir);
-      if (!dirInfo.exists) return 0;
+      const cacheDir = await this.ensureCacheDir();
+      if (!cacheDir || !cacheDir.exists) return 0;
 
-      // Calculate size recursively
-      return this.calculateDirSize(baseDir);
-    } catch (error) {
-      console.error('Failed to get map cache size:', error);
-      return 0;
-    }
-  }
-
-  async calculateDirSize(dirPath) {
-    if (!FileSystem) return 0;
-
-    try {
-      const items = await FileSystem.readDirectoryAsync(dirPath);
-      let totalSize = 0;
-
-      for (const item of items) {
-        const itemPath = `${dirPath}${item}`;
-        const info = await FileSystem.getInfoAsync(itemPath);
-
-        if (info.exists) {
-          if (info.isDirectory) {
-            totalSize += await this.calculateDirSize(`${itemPath}/`);
-          } else if (info.size) {
-            totalSize += info.size;
-          }
-        }
+      if (flightId) {
+        const flightDir = new Directory(cacheDir, flightId);
+        return flightDir.exists ? (flightDir.size || 0) : 0;
       }
 
-      return totalSize;
+      return cacheDir.size || 0;
     } catch (error) {
-      console.error('Error calculating directory size:', error);
+      console.error('Failed to get map cache size:', error);
       return 0;
     }
   }
@@ -602,12 +587,14 @@ class MapTileService {
       return this.deleteTilesForFlight(flightId);
     }
 
-    if (!FileSystem) return;
-
-    const flightCacheDir = `${MAP_CACHE_DIR}${flightId}/`;
-
     try {
-      await FileSystem.deleteAsync(flightCacheDir, { idempotent: true });
+      const cacheDir = await this.ensureCacheDir();
+      if (!cacheDir) return;
+
+      const flightDir = new Directory(cacheDir, flightId);
+      if (flightDir.exists) {
+        flightDir.delete();
+      }
     } catch (error) {
       console.error('Failed to clear tile cache for flight:', error);
     }
@@ -618,11 +605,12 @@ class MapTileService {
       return this.clearAllTilesFromDB();
     }
 
-    if (!FileSystem) return;
-
     try {
-      await FileSystem.deleteAsync(MAP_CACHE_DIR, { idempotent: true });
-      await this.ensureCacheDir();
+      if (mapCacheDir && mapCacheDir.exists) {
+        mapCacheDir.delete();
+        mapCacheDir = null;
+        await this.ensureCacheDir();
+      }
     } catch (error) {
       console.error('Failed to clear all tile cache:', error);
     }

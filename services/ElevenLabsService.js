@@ -1,13 +1,13 @@
 import { Platform } from 'react-native';
+import { File, Directory, Paths } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system';
 import { API_CONFIG, isApiKeyConfigured } from '../config/api';
 import { withRetry, isRetryableStatus } from '../utils/retry';
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 
-// FileSystem caching temporarily disabled due to expo-file-system API changes
-// TODO: Migrate to new expo-file-system File/Directory API
-let FileSystem = null;
-let AUDIO_CACHE_DIR = '';
+// Audio cache directory using new expo-file-system API
+let audioCacheDir = null;
 
 class ElevenLabsService {
   constructor() {
@@ -28,20 +28,33 @@ class ElevenLabsService {
     };
   }
 
+  updateApiKey(apiKey) {
+    this.config = {
+      ...this.config,
+      apiKey: apiKey || API_CONFIG.elevenLabs.apiKey,
+    };
+    console.log('[ElevenLabs] API key updated:', apiKey ? 'set' : 'cleared');
+  }
+
   getVoiceSettings() {
     return { ...this.voiceSettings };
   }
 
   async ensureCacheDir() {
-    if (Platform.OS === 'web' || !FileSystem) return;
-    const dirInfo = await FileSystem.getInfoAsync(AUDIO_CACHE_DIR);
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(AUDIO_CACHE_DIR, { intermediates: true });
+    if (Platform.OS === 'web') return null;
+    if (!audioCacheDir) {
+      audioCacheDir = new Directory(Paths.cache, 'audio');
+      if (!audioCacheDir.exists) {
+        audioCacheDir.create();
+      }
     }
+    return audioCacheDir;
   }
 
   isConfigured() {
-    return isApiKeyConfigured('elevenLabs');
+    // Check runtime config first (set via settings), then static config
+    const key = this.config?.apiKey;
+    return key && key.length > 10 && !key.startsWith('YOUR_');
   }
 
   async getVoices() {
@@ -130,33 +143,51 @@ class ElevenLabsService {
 
   async generateAndSaveAudio(text, filename, options = {}) {
     // Audio file saving not supported on web
-    if (Platform.OS === 'web' || !FileSystem) {
+    if (Platform.OS === 'web') {
       console.log('Audio file saving not supported on web');
       return null;
     }
 
-    await this.ensureCacheDir();
+    const cacheDir = await this.ensureCacheDir();
+    if (!cacheDir) {
+      console.error('[ElevenLabs] Cache dir not available');
+      return null;
+    }
 
-    const audioBlob = await this.generateSpeech(text, options);
-    const filePath = `${AUDIO_CACHE_DIR}${filename}.mp3`;
+    try {
+      // Generate speech using fetch (returns blob)
+      const audioBlob = await this.generateSpeech(text, options);
+      
+      if (!audioBlob) {
+        console.error('[ElevenLabs] No audio blob returned');
+        return null;
+      }
 
-    // Convert blob to base64 and save
-    const reader = new FileReader();
-    const base64Promise = new Promise((resolve, reject) => {
-      reader.onloadend = () => {
-        const base64 = reader.result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-    });
-    reader.readAsDataURL(audioBlob);
+      // Convert blob to base64 using arrayBuffer
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Convert to base64 manually (works on native)
+      let binary = '';
+      for (let i = 0; i < uint8Array.length; i++) {
+        binary += String.fromCharCode(uint8Array[i]);
+      }
+      const base64Data = btoa(binary);
 
-    const base64Data = await base64Promise;
-    await FileSystem.writeAsStringAsync(filePath, base64Data, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+      // Build file path directly (don't mix new File API with legacy write)
+      const filePath = `${cacheDir.uri}/${filename}.mp3`;
+      
+      // Write to file using legacy API
+      await FileSystem.writeAsStringAsync(filePath, base64Data, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
-    return filePath;
+      console.log(`[ElevenLabs] Audio saved: ${filePath}`);
+      return filePath;
+    } catch (error) {
+      console.error('[ElevenLabs] Failed to generate/save audio:', error?.message || error);
+      return null;
+    }
   }
 
   async generateFlightPackAudio(checkpoints, onProgress) {
@@ -196,37 +227,30 @@ class ElevenLabsService {
   }
 
   async getAudioFilePath(checkpointId) {
-    if (Platform.OS === 'web' || !FileSystem) return null;
-    const filePath = `${AUDIO_CACHE_DIR}checkpoint_${checkpointId}.mp3`;
+    if (Platform.OS === 'web') return null;
+    const cacheDir = await this.ensureCacheDir();
+    if (!cacheDir) return null;
+    
+    const filePath = `${cacheDir.uri}/checkpoint_${checkpointId}.mp3`;
     const fileInfo = await FileSystem.getInfoAsync(filePath);
     return fileInfo.exists ? filePath : null;
   }
 
   async clearAudioCache() {
-    if (Platform.OS === 'web' || !FileSystem) return;
-    const dirInfo = await FileSystem.getInfoAsync(AUDIO_CACHE_DIR);
-    if (dirInfo.exists) {
-      await FileSystem.deleteAsync(AUDIO_CACHE_DIR, { idempotent: true });
+    if (Platform.OS === 'web') return;
+    if (audioCacheDir && audioCacheDir.exists) {
+      audioCacheDir.delete();
+      audioCacheDir = null;
       await this.ensureCacheDir();
     }
   }
 
   async getCacheSize() {
-    if (Platform.OS === 'web' || !FileSystem) return 0;
-    const dirInfo = await FileSystem.getInfoAsync(AUDIO_CACHE_DIR);
-    if (!dirInfo.exists) return 0;
+    if (Platform.OS === 'web') return 0;
+    const cacheDir = await this.ensureCacheDir();
+    if (!cacheDir || !cacheDir.exists) return 0;
 
-    const files = await FileSystem.readDirectoryAsync(AUDIO_CACHE_DIR);
-    let totalSize = 0;
-
-    for (const file of files) {
-      const fileInfo = await FileSystem.getInfoAsync(`${AUDIO_CACHE_DIR}${file}`);
-      if (fileInfo.size) {
-        totalSize += fileInfo.size;
-      }
-    }
-
-    return totalSize;
+    return cacheDir.size || 0;
   }
 }
 

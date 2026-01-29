@@ -63,12 +63,22 @@ class ClaudeService {
     };
   }
 
+  updateApiKey(apiKey) {
+    this.config = {
+      ...this.config,
+      apiKey: apiKey || API_CONFIG.claude.apiKey,
+    };
+    console.log('[Claude] API key updated:', apiKey ? 'set' : 'cleared');
+  }
+
   getNarrationPreferences() {
     return { ...this.narrationPreferences };
   }
 
   isConfigured() {
-    return isApiKeyConfigured('claude');
+    // Check runtime config first (set via settings), then static config
+    const key = this.config?.apiKey;
+    return key && key.length > 10 && !key.startsWith('YOUR_');
   }
 
   async generateNarration(latitude, longitude, altitude, context = {}) {
@@ -185,6 +195,9 @@ class ClaudeService {
     // Build landmark context if available
     const landmarkContext = this.buildLandmarkContext(context);
 
+    // Build flight route context
+    const routeContext = this.buildRouteContext(context);
+
     // Build language instruction
     const language = this.narrationPreferences.language || 'en';
     const languageName = ClaudeService.LANGUAGE_NAMES[language] || 'English';
@@ -197,6 +210,7 @@ class ClaudeService {
 Location: ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°
 ${altitudeContext}
 ${context.flightInfo ? `Flight: ${context.flightInfo}` : ''}
+${routeContext}
 ${landmarkContext}
 
 Guidelines:
@@ -206,9 +220,33 @@ Guidelines:
 - Use vivid but concise language suitable for audio narration
 - Don't mention the coordinates directly - describe what's there
 - If over ocean, describe maritime features, shipping routes, or underwater geography
+- Weave in the journey context naturally (where we departed from, where we're headed)
 ${languageInstruction}
 
 Respond with ONLY the narration text, no additional commentary.`;
+  }
+
+  /**
+   * Build flight route context string for the prompt
+   */
+  buildRouteContext(context) {
+    const parts = [];
+    
+    if (context.origin && context.destination) {
+      parts.push(`Route: ${context.origin} → ${context.destination}`);
+    } else if (context.origin) {
+      parts.push(`Departed from: ${context.origin}`);
+    } else if (context.destination) {
+      parts.push(`Heading to: ${context.destination}`);
+    }
+
+    // Add checkpoint progress if available
+    if (context.checkpointIndex !== undefined && context.totalCheckpoints) {
+      const progress = Math.round((context.checkpointIndex / context.totalCheckpoints) * 100);
+      parts.push(`Journey progress: ${progress}% (checkpoint ${context.checkpointIndex + 1} of ${context.totalCheckpoints})`);
+    }
+
+    return parts.join('\n');
   }
 
   /**

@@ -1,4 +1,6 @@
 import { Platform } from 'react-native';
+import { File, Directory, Paths } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system';
 import { claudeService } from './ClaudeService';
 import { elevenLabsService } from './ElevenLabsService';
 import { audioService } from './AudioService';
@@ -8,10 +10,8 @@ import { mapTileService } from './MapTileService';
 import { isApiKeyConfigured } from '../config/api';
 import { routeToCheckpoints, estimateFlightDuration, formatDuration } from '../utils/routeUtils';
 
-// FileSystem caching temporarily disabled due to expo-file-system API changes
-// TODO: Migrate to new expo-file-system File/Directory API
-let FileSystem = null;
-let NARRATION_CACHE_DIR = '';
+// Narration cache directory using new expo-file-system API
+let narrationCacheDir = null;
 
 class NarrationService {
   constructor() {
@@ -39,11 +39,14 @@ class NarrationService {
   }
 
   async ensureCacheDir() {
-    if (Platform.OS === 'web' || !FileSystem) return;
-    const dirInfo = await FileSystem.getInfoAsync(NARRATION_CACHE_DIR);
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(NARRATION_CACHE_DIR, { intermediates: true });
+    if (Platform.OS === 'web') return null;
+    if (!narrationCacheDir) {
+      narrationCacheDir = new Directory(Paths.cache, 'narrations');
+      if (!narrationCacheDir.exists) {
+        narrationCacheDir.create();
+      }
     }
+    return narrationCacheDir;
   }
 
   // Generate narration for current position (live mode)
@@ -132,6 +135,8 @@ class NarrationService {
               },
               origin: pack.origin?.name,
               destination: pack.destination?.name,
+              checkpointIndex: i,
+              totalCheckpoints: checkpoints.length,
             }
           );
         } catch (error) {
@@ -175,6 +180,22 @@ class NarrationService {
       pack.mapTilesDownloaded = 0;
     }
 
+    // Generate audio for narrations if ElevenLabs is configured
+    if (isApiKeyConfigured('elevenLabs')) {
+      if (onProgress) onProgress('Generating voice narrations...');
+      try {
+        const audioResult = await this.generateFlightPackAudio(pack, (done, total) => {
+          if (onProgress) onProgress(`Generating voice ${done}/${total}...`);
+        });
+        pack.hasAudio = audioResult?.checkpoints?.some(c => c.audioPath) || false;
+      } catch (error) {
+        console.warn('Audio generation failed, continuing without voice:', error?.message || error);
+        pack.hasAudio = false;
+      }
+    } else {
+      pack.hasAudio = false;
+    }
+
     // Save to cache
     await this.saveFlightPack(pack);
     this.flightPacks.set(packId, pack);
@@ -205,9 +226,11 @@ class NarrationService {
       return;
     }
 
-    if (!FileSystem) return;
-    const filePath = `${NARRATION_CACHE_DIR}${pack.id}.json`;
-    await FileSystem.writeAsStringAsync(filePath, JSON.stringify(pack));
+    const cacheDir = await this.ensureCacheDir();
+    if (!cacheDir) return;
+    
+    const file = new File(cacheDir, `${pack.id}.json`);
+    file.write(JSON.stringify(pack));
   }
 
   async loadFlightPack(flightNumber) {
@@ -233,14 +256,14 @@ class NarrationService {
       return null;
     }
 
-    if (!FileSystem) return null;
+    const cacheDir = await this.ensureCacheDir();
+    if (!cacheDir) return null;
 
     // Check file cache
-    const filePath = `${NARRATION_CACHE_DIR}${packId}.json`;
-    const fileInfo = await FileSystem.getInfoAsync(filePath);
+    const file = new File(cacheDir, `${packId}.json`);
 
-    if (fileInfo.exists) {
-      const content = await FileSystem.readAsStringAsync(filePath);
+    if (file.exists) {
+      const content = file.text();
       const pack = JSON.parse(content);
       this.flightPacks.set(packId, pack);
       return pack;
@@ -251,7 +274,7 @@ class NarrationService {
 
   async listCachedFlightPacks() {
     // On web, return memory-cached packs only
-    if (Platform.OS === 'web' || !FileSystem) {
+    if (Platform.OS === 'web') {
       return Array.from(this.flightPacks.values()).map(pack => ({
         id: pack.id,
         flightNumber: pack.flightNumber,
@@ -260,12 +283,22 @@ class NarrationService {
       }));
     }
 
-    const files = await FileSystem.readDirectoryAsync(NARRATION_CACHE_DIR);
+    const cacheDir = await this.ensureCacheDir();
+    if (!cacheDir || !cacheDir.exists) {
+      return Array.from(this.flightPacks.values()).map(pack => ({
+        id: pack.id,
+        flightNumber: pack.flightNumber,
+        downloadedAt: pack.downloadedAt,
+        checkpointCount: pack.checkpoints.length,
+      }));
+    }
+
+    const items = cacheDir.list();
     const packs = [];
 
-    for (const file of files) {
-      if (file.endsWith('.json')) {
-        const content = await FileSystem.readAsStringAsync(`${NARRATION_CACHE_DIR}${file}`);
+    for (const item of items) {
+      if (item instanceof File && item.uri.endsWith('.json')) {
+        const content = item.text();
         const pack = JSON.parse(content);
         packs.push({
           id: pack.id,
@@ -300,9 +333,13 @@ class NarrationService {
       return;
     }
 
-    if (!FileSystem) return;
-    const filePath = `${NARRATION_CACHE_DIR}${packId}.json`;
-    await FileSystem.deleteAsync(filePath, { idempotent: true });
+    const cacheDir = await this.ensureCacheDir();
+    if (!cacheDir) return;
+    
+    const file = new File(cacheDir, `${packId}.json`);
+    if (file.exists) {
+      file.delete();
+    }
   }
 
   async clearAllFlightPacks() {
@@ -327,10 +364,9 @@ class NarrationService {
       return;
     }
 
-    if (!FileSystem) return;
-    const dirInfo = await FileSystem.getInfoAsync(NARRATION_CACHE_DIR);
-    if (dirInfo.exists) {
-      await FileSystem.deleteAsync(NARRATION_CACHE_DIR, { idempotent: true });
+    if (narrationCacheDir && narrationCacheDir.exists) {
+      narrationCacheDir.delete();
+      narrationCacheDir = null;
       await this.ensureCacheDir();
     }
   }
@@ -351,23 +387,11 @@ class NarrationService {
       }
     }
 
-    if (!FileSystem) return 0;
-
     try {
-      const dirInfo = await FileSystem.getInfoAsync(NARRATION_CACHE_DIR);
-      if (!dirInfo.exists) return 0;
+      const cacheDir = await this.ensureCacheDir();
+      if (!cacheDir || !cacheDir.exists) return 0;
 
-      const files = await FileSystem.readDirectoryAsync(NARRATION_CACHE_DIR);
-      let totalSize = 0;
-
-      for (const file of files) {
-        const fileInfo = await FileSystem.getInfoAsync(`${NARRATION_CACHE_DIR}${file}`);
-        if (fileInfo.exists && fileInfo.size) {
-          totalSize += fileInfo.size;
-        }
-      }
-
-      return totalSize;
+      return cacheDir.size || 0;
     } catch (error) {
       console.error('Failed to get narration cache size:', error);
       return 0;
