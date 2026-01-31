@@ -1,125 +1,107 @@
-# Window Seat AI - App Store Listings
+# Window Seat AI - App Store Listing
 
 ## App Name
-**Window Seat AI**
+**Window Seat AI** (or "Window Seat" if taken)
 
-## Subtitle / Short Description (30 chars for iOS, 80 for Android)
-**iOS:** Your AI flight companion
-**Android:** AI-powered flight narrations — know what you're flying over
+## Subtitle (30 chars max)
+Your AI Flight Companion
+
+## Short Description (80 chars - Play Store)
+Turn your flight into a journey of discovery. AI narrates what's below.
 
 ---
 
 ## Full Description
 
-**Turn every window seat into a journey of discovery.**
+**Ever wondered what you're flying over?**
 
-Window Seat AI transforms your flight into an immersive experience by narrating the landscapes, cities, and landmarks passing beneath you. Simply enter your flight number before takeoff, download your personalized narration pack, and enjoy rich audio commentary throughout your journey — no internet required at 35,000 feet.
+Window Seat AI transforms every flight into a guided tour. Just enter your flight number, and our AI becomes your personal aerial historian — telling you stories about the mountains, cities, rivers, and coastlines passing beneath your window.
 
-**✈️ HOW IT WORKS**
+**How it works:**
+1. Enter your flight number before takeoff
+2. Download your flight pack (works offline!)
+3. Sit back and listen as AI narrates your journey
 
-1. Enter your flight number or route
-2. Download your narration pack (2-5 minutes on WiFi)
-3. Enable airplane mode and enjoy your flight
-4. Audio plays automatically as you pass landmarks
+**What you'll discover:**
+🏔️ **Geological wonders** — How that mountain range formed millions of years ago
+🏛️ **Historical secrets** — The battles fought, civilizations that rose and fell
+🌆 **Modern marvels** — Cities, landmarks, and how people live below
 
-**🎧 FEATURES**
+**Features:**
+✈️ Real flight data — Enter any commercial flight number
+🔇 Works offline — Download everything before takeoff
+🎧 Voice narration — Natural AI voice guides your journey
+🗺️ Offline maps — See your route without wifi
+🌍 Multi-language — Narrations in your preferred language
+📍 Smart checkpoints — Stories timed to your actual position
 
-• **AI-Generated Narrations** — Rich, engaging descriptions of mountains, rivers, cities, and historical sites along your route
+**Perfect for:**
+- Window seat enthusiasts who always wonder "what's that?"
+- Parents who want to make flights educational for kids
+- Curious travelers who love geography and history
+- Anyone tired of staring at a blank flight map
 
-• **100% Offline** — Everything downloads before your flight. Works in airplane mode at cruising altitude.
-
-• **Automatic Playback** — GPS triggers narrations as you fly over points of interest. Just listen.
-
-• **Window Side Advisor** — Know which side of the plane has the best views for your route
-
-• **Sun Tracker** — Golden hour alerts and optimal viewing recommendations
-
-• **Border Crossing Alerts** — Know when you enter a new country or state
-
-• **Flight History** — Save favorite routes for future trips
-
-**🌍 PERFECT FOR**
-
-• Curious travelers who want to learn about the world below
-• Parents looking to engage kids during long flights
-• Aviation enthusiasts and geography lovers
-• Anyone who's ever wondered "What's that down there?"
-
-**📱 WORKS WITH**
-
-• Any commercial flight worldwide
-• Demo routes available without API keys
-• Supports all major airlines and routes
-
-**🔒 PRIVACY FIRST**
-
-Your location data never leaves your device. We don't track your flights or share any information with third parties.
+**No more boring flights.** Every window seat becomes the best seat in the house.
 
 ---
 
-Download Window Seat AI and never have a boring window seat again.
-
----
-
-## Keywords (iOS - 100 chars max)
-flight,travel,airplane,aviation,GPS,narration,landmarks,tourism,window seat,in-flight,offline,maps
+## Keywords (100 chars max, comma separated)
+flight tracker, airplane window, travel guide, AI narrator, flight companion, aerial tour, geography
 
 ## Category
 **Primary:** Travel
-**Secondary:** Entertainment
+**Secondary:** Education
 
 ---
 
-## What's New (Version 1.0.0)
-Initial release! Features include:
-• AI-generated narrations for any flight route
-• Offline GPS tracking and automatic audio playback
-• Window side advisor for best views
-• Sun tracker with golden hour alerts
-• Border crossing notifications
-• Flight history with favorites
+## Feature Bullets (App Store)
+
+• **AI Flight Narrator** — Stories about everything you fly over
+• **Works Offline** — Download before takeoff, no wifi needed
+• **Real Flight Data** — Just enter your flight number
+• **Voice Narration** — Listen instead of read
+• **Offline Maps** — See your route without internet
 
 ---
 
 ## Screenshots Needed
 
-1. **Home screen** — Flight number entry with "Download" button
-2. **Downloading** — Progress bar showing narration pack download
-3. **In-flight view** — Map with route, checkpoints, telemetry display
-4. **Audio playing** — Checkpoint narration with audio controls
-5. **Window Side Advisor** — Showing left/right recommendation
-6. **Settings** — Voice and narration preferences
-7. **Flight History** — Saved routes with favorites
+1. **Flight search screen** — "Enter your flight number"
+2. **Download screen** — "Preparing your flight pack"
+3. **Map view** — Route with checkpoints
+4. **Narration playing** — Story card with audio controls
+5. **Settings** — Voice/language options
 
 ---
 
-## App Store Rating Questionnaire
+## Pricing Strategy
 
-**Does your app use location services?**
-Yes — to track user position during flights for triggering narrations
+**Option A: Freemium**
+- Free: 1 flight per month, text only
+- Pro ($4.99/mo): Unlimited flights + voice narration
 
-**Does your app access the microphone?**
-No
+**Option B: One-time Purchase**
+- $9.99 lifetime access
 
-**Does your app include in-app purchases?**
-No (v1.0)
+**Option C: Pay-per-flight**
+- Free app, $1.99 per flight pack
 
-**Does your app show ads?**
-No
-
-**Is your app made for kids?**
-No — general audience
-
-**Does your app use third-party analytics?**
-No
+**Recommendation:** Start with **Option B ($9.99 one-time)** — simple, no subscription fatigue, easy to explain.
 
 ---
+
+## Privacy Policy URL (required)
+Need to create: `https://windowseatai.com/privacy` or use a GitHub Pages URL
 
 ## Support URL
-https://windowseat.app/support (or GitHub issues)
+`https://github.com/Reloded/window-seat-ai/issues` (or email)
 
-## Marketing URL
-https://windowseat.app
+---
 
-## Privacy Policy URL
-https://windowseat.app/privacy
+## App Review Notes (for Apple)
+
+"Window Seat AI uses flight data from AeroAPI to provide real-time route information. Users enter a flight number, and the app generates AI narrations about landmarks along the route. All content can be downloaded for offline use during flight mode. The app requires an internet connection only for initial flight pack download."
+
+---
+
+*Draft by Kai 🌀 — Jan 31, 2026*
