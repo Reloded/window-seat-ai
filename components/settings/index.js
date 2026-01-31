@@ -6,3 +6,4 @@ export { SettingsToggle } from './SettingsToggle';
 export { SettingsPicker } from './SettingsPicker';
 export { SettingsInput } from './SettingsInput';
 export { SettingsButton } from './SettingsButton';
+export { DebugLogsModal } from './DebugLogsModal';

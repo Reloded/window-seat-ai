@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   View,
@@ -16,8 +16,12 @@ import { GPSSection } from './sections/GPSSection';
 import { DisplaySection } from './sections/DisplaySection';
 import { StorageSection } from './sections/StorageSection';
 import { APISection } from './sections/APISection';
+import { SettingsSection } from './SettingsSection';
+import { SettingsButton } from './SettingsButton';
+import { DebugLogsModal } from './DebugLogsModal';
 
 export function SettingsModal({ visible, onClose }) {
+  const [debugLogsVisible, setDebugLogsVisible] = useState(false);
   return (
     <Modal
       visible={visible}
@@ -49,9 +53,25 @@ export function SettingsModal({ visible, onClose }) {
           <StorageSection />
           <APISection />
 
+          {/* Debug Section */}
+          <SettingsSection title="Developer">
+            <View style={styles.debugButtonContainer}>
+              <SettingsButton
+                label="View Debug Logs"
+                onPress={() => setDebugLogsVisible(true)}
+              />
+            </View>
+          </SettingsSection>
+
           {/* Bottom padding */}
           <View style={styles.bottomPadding} />
         </ScrollView>
+
+        {/* Debug Logs Modal */}
+        <DebugLogsModal
+          visible={debugLogsVisible}
+          onClose={() => setDebugLogsVisible(false)}
+        />
       </SafeAreaView>
     </Modal>
   );
@@ -93,5 +113,8 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 40,
+  },
+  debugButtonContainer: {
+    padding: 16,
   },
 });

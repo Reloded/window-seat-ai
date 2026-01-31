@@ -3,7 +3,9 @@ import { File, Directory, Paths } from 'expo-file-system';
 import * as FileSystem from 'expo-file-system';
 import { API_CONFIG, isApiKeyConfigured } from '../config/api';
 import { withRetry, isRetryableStatus } from '../utils/retry';
+import { createLogger } from '../utils/logger';
 
+const log = createLogger('ElevenLabsService');
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 
 // Audio cache directory using new expo-file-system API
@@ -77,20 +79,25 @@ class ElevenLabsService {
   }
 
   async generateSpeech(text, options = {}) {
+    log.info('generateSpeech called', { textLength: text?.length, hasOptions: !!Object.keys(options).length });
+    
     if (!this.isConfigured()) {
+      log.error('API key not configured');
       throw new Error('ElevenLabs API key not configured');
     }
 
     // Merge stored settings with provided options
     const mergedOptions = { ...this.voiceSettings, ...options };
     const voiceId = mergedOptions.voiceId || this.config.voiceId;
+    log.debug('Using voice', { voiceId });
 
     return withRetry(
       async (attempt) => {
         if (attempt > 0) {
-          console.log(`ElevenLabsService: Retry attempt ${attempt} for speech generation`);
+          log.warn(`Retry attempt ${attempt} for speech generation`);
         }
 
+        log.debug('Making TTS API request...');
         const response = await fetch(
           `${ELEVENLABS_API_URL}/text-to-speech/${voiceId}`,
           {
@@ -101,7 +108,7 @@ class ElevenLabsService {
             },
             body: JSON.stringify({
               text,
-              model_id: mergedOptions.modelId || 'eleven_monolingual_v1',
+              model_id: mergedOptions.modelId || 'eleven_turbo_v2_5',
               voice_settings: {
                 stability: mergedOptions.stability ?? 0.5,
                 similarity_boost: mergedOptions.similarityBoost ?? 0.75,
@@ -112,10 +119,13 @@ class ElevenLabsService {
           }
         );
 
+        log.debug('API response received', { status: response.status, ok: response.ok });
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           const error = new Error(errorData.detail?.message || 'Failed to generate speech');
           error.status = response.status;
+          log.error('API error', { status: response.status, detail: errorData.detail });
           // Don't retry auth errors
           if (response.status === 401) {
             error.noRetry = true;
@@ -123,7 +133,9 @@ class ElevenLabsService {
           throw error;
         }
 
-        return response.blob();
+        const blob = await response.blob();
+        log.info('Speech generated successfully', { blobSize: blob.size, blobType: blob.type });
+        return blob;
       },
       {
         maxRetries: 3,
@@ -142,63 +154,81 @@ class ElevenLabsService {
   }
 
   async generateAndSaveAudio(text, filename, options = {}) {
+    log.info('generateAndSaveAudio called', { filename, textLength: text?.length });
+    
     // Audio file saving not supported on web
     if (Platform.OS === 'web') {
-      console.log('Audio file saving not supported on web');
+      log.warn('Audio file saving not supported on web');
       return null;
     }
 
     const cacheDir = await this.ensureCacheDir();
     if (!cacheDir) {
-      console.error('[ElevenLabs] Cache dir not available');
+      log.error('Cache dir not available');
       return null;
     }
+    log.debug('Cache dir ready', { uri: cacheDir.uri });
 
     try {
       // Generate speech using fetch (returns blob)
+      log.debug('Calling generateSpeech...');
       const audioBlob = await this.generateSpeech(text, options);
       
       if (!audioBlob) {
-        console.error('[ElevenLabs] No audio blob returned');
+        log.error('No audio blob returned from generateSpeech');
         return null;
       }
+      log.debug('Got audio blob', { size: audioBlob.size, type: audioBlob.type });
 
-      // Convert blob to base64 using arrayBuffer
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      
-      // Convert to base64 manually (works on native)
-      let binary = '';
-      for (let i = 0; i < uint8Array.length; i++) {
-        binary += String.fromCharCode(uint8Array[i]);
-      }
-      const base64Data = btoa(binary);
-
-      // Build file path directly (don't mix new File API with legacy write)
-      const filePath = `${cacheDir.uri}/${filename}.mp3`;
-      
-      // Write to file using legacy API
-      await FileSystem.writeAsStringAsync(filePath, base64Data, {
-        encoding: FileSystem.EncodingType.Base64,
+      // Convert blob to base64 using FileReader (React Native compatible)
+      log.debug('Converting blob to base64...');
+      const base64Data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          // FileReader returns data:audio/mpeg;base64,XXXX - strip the prefix
+          const base64 = reader.result?.split(',')[1];
+          if (base64) {
+            resolve(base64);
+          } else {
+            reject(new Error('Failed to convert blob to base64'));
+          }
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(audioBlob);
       });
+      log.debug('Base64 conversion complete', { base64Length: base64Data.length });
 
-      console.log(`[ElevenLabs] Audio saved: ${filePath}`);
-      return filePath;
+      // Use new File API to write base64 data
+      const filePath = `${cacheDir.uri}/${filename}.mp3`;
+      log.debug('Writing to file', { filePath });
+      
+      // Create File instance and write base64 data
+      const audioFile = new File(cacheDir, `${filename}.mp3`);
+      await audioFile.write(base64Data, { encoding: 'base64' });
+
+      log.info('Audio saved successfully', { filePath: audioFile.uri });
+      return audioFile.uri;
     } catch (error) {
-      console.error('[ElevenLabs] Failed to generate/save audio:', error?.message || error);
+      log.error('Failed to generate/save audio', { error: error?.message, stack: error?.stack });
       return null;
     }
   }
 
   async generateFlightPackAudio(checkpoints, onProgress) {
+    log.info('generateFlightPackAudio started', { checkpointCount: checkpoints?.length });
     const audioFiles = [];
     let completed = 0;
 
     for (const checkpoint of checkpoints) {
-      if (!checkpoint.narration) continue;
+      if (!checkpoint.narration) {
+        log.debug('Skipping checkpoint without narration', { id: checkpoint.id });
+        continue;
+      }
 
       try {
         const filename = `checkpoint_${checkpoint.id}`;
+        log.debug('Processing checkpoint', { id: checkpoint.id, narrationLength: checkpoint.narration.length });
+        
         const filePath = await this.generateAndSaveAudio(
           checkpoint.narration,
           filename
@@ -208,13 +238,14 @@ class ElevenLabsService {
           checkpointId: checkpoint.id,
           filePath,
         });
+        log.debug('Checkpoint audio complete', { id: checkpoint.id, filePath });
 
         completed++;
         if (onProgress) {
           onProgress(completed, checkpoints.length);
         }
       } catch (error) {
-        console.error(`Failed to generate audio for ${checkpoint.id}:`, error);
+        log.error('Failed to generate audio for checkpoint', { id: checkpoint.id, error: error.message });
         audioFiles.push({
           checkpointId: checkpoint.id,
           filePath: null,
@@ -223,6 +254,11 @@ class ElevenLabsService {
       }
     }
 
+    log.info('generateFlightPackAudio complete', { 
+      total: checkpoints.length, 
+      succeeded: audioFiles.filter(a => a.filePath).length,
+      failed: audioFiles.filter(a => !a.filePath).length 
+    });
     return audioFiles;
   }
 

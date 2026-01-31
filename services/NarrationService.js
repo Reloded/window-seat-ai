@@ -9,6 +9,9 @@ import { landmarkService } from './LandmarkService';
 import { mapTileService } from './MapTileService';
 import { isApiKeyConfigured } from '../config/api';
 import { routeToCheckpoints, estimateFlightDuration, formatDuration } from '../utils/routeUtils';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('NarrationService');
 
 // Narration cache directory using new expo-file-system API
 let narrationCacheDir = null;
@@ -58,7 +61,7 @@ class NarrationService {
     try {
       return await claudeService.generateNarration(latitude, longitude, altitude);
     } catch (error) {
-      console.error('Live narration failed:', error);
+      log.error('Live narration failed', error);
       return this.getMockNarration();
     }
   }
@@ -66,6 +69,8 @@ class NarrationService {
   // Download and cache a complete flight pack
   async downloadFlightPack(flightNumber, onProgress) {
     const packId = flightNumber.toUpperCase().replace(/\s/g, '');
+    const timer = log.time(`downloadFlightPack(${packId})`);
+    log.info('Starting flight pack download', { flightNumber, packId });
 
     // Fetch flight route data
     if (onProgress) onProgress('Fetching flight route...');
@@ -108,7 +113,7 @@ class NarrationService {
         },
       });
     } catch (error) {
-      console.warn('Landmark enrichment failed, using default names:', error);
+      log.warn('Landmark enrichment failed, using default names', error);
     }
 
     // Generate narrations for each checkpoint
@@ -140,7 +145,7 @@ class NarrationService {
             }
           );
         } catch (error) {
-          console.error(`Failed to generate narration for checkpoint ${i}:`, error);
+          log.error(`Failed to generate narration for checkpoint ${i}`, error);
           checkpoint.narration = this.getDefaultNarration(checkpoint);
         }
       }
@@ -155,6 +160,7 @@ class NarrationService {
 
     // Download offline map tiles (optional - don't fail if this doesn't work)
     if (onProgress) onProgress('Downloading offline maps...');
+    log.info('Starting map tile download', { routeLength: flightData.route?.length, packId });
     try {
       if (flightData.route && flightData.route.length >= 2) {
         const mapResult = await mapTileService.preCacheTilesForRoute(
@@ -171,37 +177,44 @@ class NarrationService {
         pack.hasOfflineMaps = mapResult?.success || false;
         pack.mapTilesDownloaded = mapResult?.tilesDownloaded || mapResult?.mapsDownloaded || 0;
       } else {
-        console.warn('Skipping map download - invalid route');
+        log.warn('Skipping map download - invalid route');
         pack.hasOfflineMaps = false;
       }
     } catch (error) {
-      console.warn('Map tile download failed, continuing without offline maps:', error?.message || error);
+      log.warn('Map tile download failed, continuing without offline maps', error);
       pack.hasOfflineMaps = false;
       pack.mapTilesDownloaded = 0;
     }
 
     // Generate audio for narrations if ElevenLabs is configured
     // Use elevenLabsService.isConfigured() to check runtime config (set via Settings)
-    if (elevenLabsService.isConfigured()) {
+    const elevenLabsConfigured = elevenLabsService.isConfigured();
+    log.info('ElevenLabs configured check', { configured: elevenLabsConfigured });
+    
+    if (elevenLabsConfigured) {
       if (onProgress) onProgress('Generating voice narrations...');
+      log.info('Starting audio generation', { checkpointCount: pack.checkpoints?.length });
       try {
         const audioResult = await this.generateFlightPackAudio(pack, (done, total) => {
           if (onProgress) onProgress(`Generating voice ${done}/${total}...`);
         });
         pack.hasAudio = audioResult?.checkpoints?.some(c => c.audioPath) || false;
+        log.info('Audio generation complete', { hasAudio: pack.hasAudio });
       } catch (error) {
-        console.warn('Audio generation failed, continuing without voice:', error?.message || error);
+        log.warn('Audio generation failed, continuing without voice', error);
         pack.hasAudio = false;
       }
     } else {
-      console.log('[NarrationService] ElevenLabs not configured, skipping audio generation');
+      log.debug('ElevenLabs not configured, skipping audio generation');
       pack.hasAudio = false;
     }
 
     // Save to cache
+    log.info('Saving flight pack to cache', { packId, checkpointCount: pack.checkpoints?.length });
     await this.saveFlightPack(pack);
     this.flightPacks.set(packId, pack);
 
+    timer.end({ success: true, hasOfflineMaps: pack.hasOfflineMaps, hasAudio: pack.hasAudio });
     return pack;
   }
 
@@ -223,7 +236,7 @@ class NarrationService {
       try {
         localStorage.setItem(`flightPack_${pack.id}`, JSON.stringify(pack));
       } catch (e) {
-        console.warn('Failed to save to localStorage:', e);
+        log.warn('Failed to save to localStorage', e);
       }
       return;
     }
@@ -253,7 +266,7 @@ class NarrationService {
           return pack;
         }
       } catch (e) {
-        console.warn('Failed to load from localStorage:', e);
+        log.warn('Failed to load from localStorage', e);
       }
       return null;
     }
@@ -322,7 +335,7 @@ class NarrationService {
     try {
       await mapTileService.clearTileCache(packId);
     } catch (e) {
-      console.warn('Failed to clear map tile cache:', e);
+      log.warn('Failed to clear map tile cache for flight', e);
     }
 
     // On web, clear localStorage
@@ -330,7 +343,7 @@ class NarrationService {
       try {
         localStorage.removeItem(`flightPack_${packId}`);
       } catch (e) {
-        console.warn('Failed to remove from localStorage:', e);
+        log.warn('Failed to remove from localStorage', e);
       }
       return;
     }
@@ -352,7 +365,7 @@ class NarrationService {
     try {
       await mapTileService.clearAllTileCache();
     } catch (e) {
-      console.warn('Failed to clear map tile cache:', e);
+      log.warn('Failed to clear all map tile cache', e);
     }
 
     // On web, clear localStorage
@@ -361,7 +374,7 @@ class NarrationService {
         const keys = Object.keys(localStorage).filter(k => k.startsWith('flightPack_'));
         keys.forEach(k => localStorage.removeItem(k));
       } catch (e) {
-        console.warn('Failed to clear localStorage:', e);
+        log.warn('Failed to clear all localStorage', e);
       }
       return;
     }
@@ -395,7 +408,7 @@ class NarrationService {
 
       return cacheDir.size || 0;
     } catch (error) {
-      console.error('Failed to get narration cache size:', error);
+      log.error('Failed to get narration cache size', error);
       return 0;
     }
   }
@@ -443,7 +456,7 @@ class NarrationService {
         timeout: 5000, // Limit timeout for preview
       });
     } catch (error) {
-      console.warn('Landmark enrichment failed for preview:', error);
+      log.warn('Landmark enrichment failed for preview', error);
     }
 
     // Return just name and type for preview (no narrations)
@@ -504,8 +517,8 @@ class NarrationService {
 
   // Audio generation methods
   async generateFlightPackAudio(pack, onProgress) {
-    if (!isApiKeyConfigured('elevenLabs')) {
-      console.log('ElevenLabs not configured, skipping audio generation');
+    if (!elevenLabsService.isConfigured()) {
+      log.debug('ElevenLabs not configured in generateFlightPackAudio');
       return pack;
     }
 
@@ -537,7 +550,7 @@ class NarrationService {
 
   async playCurrentNarration(narrationText) {
     // Try ElevenLabs if configured
-    if (isApiKeyConfigured('elevenLabs')) {
+    if (elevenLabsService.isConfigured()) {
       try {
         const filePath = await elevenLabsService.generateAndSaveAudio(
           narrationText,
@@ -545,7 +558,7 @@ class NarrationService {
         );
         return await audioService.playUri(filePath);
       } catch (error) {
-        console.error('ElevenLabs failed:', error);
+        log.error('ElevenLabs live narration failed', error);
       }
     }
     return false;
@@ -572,7 +585,7 @@ class NarrationService {
   }
 
   hasAudioSupport() {
-    return isApiKeyConfigured('elevenLabs');
+    return elevenLabsService.isConfigured();
   }
 
   // Queue playback methods
