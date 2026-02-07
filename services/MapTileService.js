@@ -544,7 +544,7 @@ class MapTileService {
       const flightDir = new Directory(cacheDir, flightId);
       const metadataFile = new File(flightDir, 'metadata.json');
       if (metadataFile.exists) {
-        const content = metadataFile.text();
+        const content = await metadataFile.text();
         return JSON.parse(content);
       }
     } catch (error) {

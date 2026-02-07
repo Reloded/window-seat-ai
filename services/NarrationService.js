@@ -296,7 +296,7 @@ class NarrationService {
     const file = new File(cacheDir, `${packId}.json`);
 
     if (file.exists) {
-      const content = file.text();
+      const content = await file.text();
       const pack = JSON.parse(content);
       this.flightPacks.set(packId, pack);
       return pack;
@@ -331,7 +331,7 @@ class NarrationService {
 
     for (const item of items) {
       if (item instanceof File && item.uri.endsWith('.json')) {
-        const content = item.text();
+        const content = await item.text();
         const pack = JSON.parse(content);
         packs.push({
           id: pack.id,
