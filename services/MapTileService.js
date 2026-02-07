@@ -1,6 +1,5 @@
 import { Platform } from 'react-native';
 import { File, Directory, Paths } from 'expo-file-system';
-import * as FileSystem from 'expo-file-system';
 import {
   getTilesForRoute,
   getTileUrl,
@@ -406,31 +405,29 @@ class MapTileService {
 
         try {
           const file = new File(flightCacheDir, `${config.name}.png`);
-          const filePath = file.uri;
           const url = this.buildStaticMapUrl(route, center, config);
 
           // Set a timeout for the download
-          const downloadPromise = FileSystem.downloadAsync(url, filePath);
+          const downloadPromise = File.downloadFileAsync(url, file, { idempotent: true });
           const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Download timeout')), 30000)
           );
 
-          const downloadResult = await Promise.race([downloadPromise, timeoutPromise]);
+          const downloadedFile = await Promise.race([downloadPromise, timeoutPromise]);
 
-          if (downloadResult && downloadResult.status === 200) {
+          if (downloadedFile && downloadedFile.exists) {
             results.push({
               name: config.name,
-              filePath,
+              filePath: downloadedFile.uri,
               success: true,
             });
             downloaded++;
           } else {
-            // If download fails, continue without crashing
             results.push({
               name: config.name,
               filePath: null,
               success: false,
-              error: downloadResult ? `HTTP ${downloadResult.status}` : 'No response',
+              error: 'Download failed',
             });
           }
         } catch (error) {

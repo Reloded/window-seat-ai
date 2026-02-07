@@ -1,6 +1,5 @@
 import { Platform } from 'react-native';
 import { File, Directory, Paths } from 'expo-file-system';
-import * as FileSystem from 'expo-file-system';
 import { claudeService } from './ClaudeService';
 import { elevenLabsService } from './ElevenLabsService';
 import { audioService } from './AudioService';

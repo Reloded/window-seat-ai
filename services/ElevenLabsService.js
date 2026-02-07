@@ -1,6 +1,5 @@
 import { Platform } from 'react-native';
 import { File, Directory, Paths } from 'expo-file-system';
-import * as FileSystem from 'expo-file-system';
 import { API_CONFIG, isApiKeyConfigured } from '../config/api';
 import { withRetry, isRetryableStatus } from '../utils/retry';
 import { createLogger } from '../utils/logger';
@@ -267,9 +266,8 @@ class ElevenLabsService {
     const cacheDir = await this.ensureCacheDir();
     if (!cacheDir) return null;
     
-    const filePath = `${cacheDir.uri}/checkpoint_${checkpointId}.mp3`;
-    const fileInfo = await FileSystem.getInfoAsync(filePath);
-    return fileInfo.exists ? filePath : null;
+    const file = new File(cacheDir, `checkpoint_${checkpointId}.mp3`);
+    return file.exists ? file.uri : null;
   }
 
   async clearAudioCache() {

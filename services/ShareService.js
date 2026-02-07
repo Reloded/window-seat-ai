@@ -1,11 +1,10 @@
 import { Platform, Share } from 'react-native';
+import { File, Paths } from 'expo-file-system';
 
 let Sharing = null;
-let FileSystem = null;
 
 if (Platform.OS !== 'web') {
   Sharing = require('expo-sharing');
-  FileSystem = require('expo-file-system/legacy');
 }
 
 class ShareService {
@@ -68,17 +67,17 @@ class ShareService {
   }
 
   async shareAsFile(pack) {
-    if (Platform.OS === 'web' || !FileSystem || !Sharing) {
+    if (Platform.OS === 'web' || !Sharing) {
       return { success: false, error: 'File sharing not available on web' };
     }
 
     const text = this.formatFlightPackText(pack);
     const fileName = `${pack.flightNumber}_narration.txt`;
-    const filePath = `${FileSystem.cacheDirectory}${fileName}`;
+    const file = new File(Paths.cache, fileName);
 
     try {
       // Write the text to a file
-      await FileSystem.writeAsStringAsync(filePath, text);
+      file.write(text);
 
       // Check if sharing is available
       const isAvailable = await Sharing.isAvailableAsync();
@@ -87,7 +86,7 @@ class ShareService {
       }
 
       // Share the file
-      await Sharing.shareAsync(filePath, {
+      await Sharing.shareAsync(file.uri, {
         mimeType: 'text/plain',
         dialogTitle: `Share ${pack.flightNumber} Narration`,
         UTI: 'public.plain-text',
