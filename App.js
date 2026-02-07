@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,7 +9,27 @@ import {
   StatusBar,
   Modal,
   Platform,
+  LogBox,
 } from 'react-native';
+// Global crash handler - catches unhandled JS exceptions and logs them
+if (Platform.OS !== 'web' && global.ErrorUtils) {
+  const originalHandler = global.ErrorUtils.getGlobalHandler();
+  global.ErrorUtils.setGlobalHandler((error, isFatal) => {
+    console.error(`[CRASH] ${isFatal ? 'FATAL' : 'non-fatal'}:`, error?.name, error?.message);
+    console.error('[CRASH] Stack:', error?.stack);
+    if (originalHandler) originalHandler(error, isFatal);
+  });
+}
+
+// Catch unhandled promise rejections
+if (Platform.OS !== 'web') {
+  const RNPromise = global.Promise;
+  if (typeof global.addEventListener === 'function') {
+    global.addEventListener('unhandledrejection', (event) => {
+      console.error('[CRASH] Unhandled rejection:', event?.reason?.message || event?.reason);
+    });
+  }
+}
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, SunTrackerDisplay, BorderCrossingAlert, ErrorBanner, ErrorBoundary, NarrationSkeleton, CheckpointListSkeleton, FlightSearch, RoutePreview, FlightMap, SettingsModal, FlightHistoryModal } from './components';
 import { useLocationTracking, useSettingsSync, useTheme } from './hooks';

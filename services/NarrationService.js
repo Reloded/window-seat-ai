@@ -181,32 +181,38 @@ class NarrationService {
     pack.checkpoints = checkpoints;
     log.info('Checkpoints assigned to pack', { packId, count: checkpoints.length });
 
-    // Download offline map tiles (optional - don't fail if this doesn't work)
-    if (onProgress) onProgress('Downloading offline maps...');
-    log.info('Starting map tile download', { routeLength: flightData.route?.length, packId });
-    try {
-      if (flightData.route && flightData.route.length >= 2) {
-        const mapResult = await mapTileService.preCacheTilesForRoute(
-          flightData.route,
-          packId,
-          (mapProgress) => {
-            if (onProgress && mapProgress && mapProgress.status === 'downloading') {
-              const pct = Math.round((mapProgress.current / mapProgress.total) * 100);
-              onProgress(`Downloading maps (${pct}%)...`);
-            }
-          },
-          { includeHighDetail: false }
-        );
-        pack.hasOfflineMaps = mapResult?.success || false;
-        pack.mapTilesDownloaded = mapResult?.tilesDownloaded || mapResult?.mapsDownloaded || 0;
-      } else {
-        log.warn('Skipping map download - invalid route');
-        pack.hasOfflineMaps = false;
-      }
-    } catch (error) {
-      log.warn('Map tile download failed, continuing without offline maps', error);
+    // Download offline map tiles (skip in demo mode — no point caching maps for mock routes)
+    if (flightData.usingMockData) {
+      log.info('Skipping map download (demo mode)', { packId });
       pack.hasOfflineMaps = false;
       pack.mapTilesDownloaded = 0;
+    } else {
+      if (onProgress) onProgress('Downloading offline maps...');
+      log.info('Starting map tile download', { routeLength: flightData.route?.length, packId });
+      try {
+        if (flightData.route && flightData.route.length >= 2) {
+          const mapResult = await mapTileService.preCacheTilesForRoute(
+            flightData.route,
+            packId,
+            (mapProgress) => {
+              if (onProgress && mapProgress && mapProgress.status === 'downloading') {
+                const pct = Math.round((mapProgress.current / mapProgress.total) * 100);
+                onProgress(`Downloading maps (${pct}%)...`);
+              }
+            },
+            { includeHighDetail: false }
+          );
+          pack.hasOfflineMaps = mapResult?.success || false;
+          pack.mapTilesDownloaded = mapResult?.tilesDownloaded || mapResult?.mapsDownloaded || 0;
+        } else {
+          log.warn('Skipping map download - invalid route');
+          pack.hasOfflineMaps = false;
+        }
+      } catch (error) {
+        log.warn('Map tile download failed, continuing without offline maps', error);
+        pack.hasOfflineMaps = false;
+        pack.mapTilesDownloaded = 0;
+      }
     }
 
     // Generate audio for narrations if ElevenLabs is configured
@@ -234,7 +240,11 @@ class NarrationService {
 
     // Save to cache
     log.info('Saving flight pack to cache', { packId, checkpointCount: pack.checkpoints?.length });
-    await this.saveFlightPack(pack);
+    try {
+      await this.saveFlightPack(pack);
+    } catch (error) {
+      log.warn('Failed to save flight pack to cache, continuing anyway', { error: error?.message });
+    }
     this.flightPacks.set(packId, pack);
 
     timer.end({ success: true, hasOfflineMaps: pack.hasOfflineMaps, hasAudio: pack.hasAudio });
