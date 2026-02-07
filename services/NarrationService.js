@@ -73,7 +73,19 @@ class NarrationService {
 
     // Fetch flight route data
     if (onProgress) onProgress('Fetching flight route...');
-    const flightData = await flightDataService.getFlightRoute(flightNumber);
+    let flightData;
+    try {
+      flightData = await flightDataService.getFlightRoute(flightNumber);
+      log.info('Flight route fetched', { packId, routeLength: flightData?.route?.length, usingMock: flightData?.usingMockData });
+    } catch (error) {
+      log.error('Failed to fetch flight route', { packId, error: error.message });
+      throw new Error(`Could not fetch flight data for ${flightNumber}: ${error.message}`);
+    }
+
+    if (!flightData || !flightData.route || flightData.route.length < 2) {
+      log.error('Invalid flight data received', { packId, hasData: !!flightData, routeLength: flightData?.route?.length });
+      throw new Error(`No valid route data found for ${flightNumber}. Try a different flight number.`);
+    }
 
     const pack = {
       id: packId,
@@ -97,11 +109,18 @@ class NarrationService {
 
     // Convert route to checkpoints
     if (onProgress) onProgress('Creating checkpoints...');
-    let checkpoints = routeToCheckpoints(flightData.route, {
-      numCheckpoints: 20,
-      minSpacing: 80000, // 80km minimum between checkpoints
-      geofenceRadius: 15000, // 15km trigger radius
-    });
+    let checkpoints;
+    try {
+      checkpoints = routeToCheckpoints(flightData.route, {
+        numCheckpoints: 20,
+        minSpacing: 80000, // 80km minimum between checkpoints
+        geofenceRadius: 15000, // 15km trigger radius
+      });
+      log.info('Checkpoints created', { packId, count: checkpoints?.length });
+    } catch (error) {
+      log.error('Failed to create checkpoints', { packId, error: error.message });
+      throw new Error(`Failed to process route for ${flightNumber}: ${error.message}`);
+    }
 
     // Enrich checkpoints with landmark data
     if (onProgress) onProgress('Identifying landmarks...');
