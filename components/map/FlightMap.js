@@ -2,14 +2,9 @@ import React, { useMemo, useRef, useEffect, useState, Component } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import MapView, { Polyline, Circle, Marker } from 'react-native-maps';
 import NetInfo from '@react-native-community/netinfo';
-import Constants from 'expo-constants';
 import { COLORS, SIZES } from './mapStyles';
 import { StaticFlightMap } from './StaticFlightMap';
 import { mapTileService } from '../../services/MapTileService';
-
-// Check if Google Maps API key is configured (Android requires it)
-const hasGoogleMapsKey = Platform.OS !== 'android' || 
-  !!Constants.expoConfig?.android?.config?.googleMaps?.apiKey;
 
 // Error boundary for map component
 class MapErrorBoundary extends Component {
@@ -224,26 +219,6 @@ export function FlightMap({
       setMapError(true);
       return null;
     }
-  }
-
-  // On Android without Google Maps API key, show fallback instead of crashing
-  if (!hasGoogleMapsKey) {
-    return (
-      <View style={[
-        styles.container,
-        isExpanded ? styles.expanded : styles.collapsed,
-        style,
-        { justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a1929' }
-      ]}>
-        <Text style={{ color: '#00d4ff', fontSize: 18, fontWeight: 'bold' }}>🗺️ Route Loaded</Text>
-        <Text style={{ color: '#8899aa', fontSize: 13, marginTop: 8, textAlign: 'center', paddingHorizontal: 20 }}>
-          {route.length} waypoints • {checkpoints.length} checkpoints
-        </Text>
-        <Text style={{ color: '#556677', fontSize: 11, marginTop: 12, textAlign: 'center', paddingHorizontal: 20 }}>
-          Map view requires Google Maps API key in Settings
-        </Text>
-      </View>
-    );
   }
 
   return (
