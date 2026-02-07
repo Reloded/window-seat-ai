@@ -122,16 +122,20 @@ class NarrationService {
       throw new Error(`Failed to process route for ${flightNumber}: ${error.message}`);
     }
 
-    // Enrich checkpoints with landmark data
-    if (onProgress) onProgress('Identifying landmarks...');
-    try {
-      checkpoints = await landmarkService.enrichCheckpoints(checkpoints, {
-        onProgress: (done, total) => {
-          if (onProgress) onProgress(`Identifying landmarks (${done}/${total})...`);
-        },
-      });
-    } catch (error) {
-      log.warn('Landmark enrichment failed, using default names', error);
+    // Enrich checkpoints with landmark data (skip in demo mode - no point hitting APIs for mock routes)
+    if (flightData.usingMockData) {
+      log.info('Skipping landmark enrichment (demo mode)', { packId });
+    } else {
+      if (onProgress) onProgress('Identifying landmarks...');
+      try {
+        checkpoints = await landmarkService.enrichCheckpoints(checkpoints, {
+          onProgress: (done, total) => {
+            if (onProgress) onProgress(`Identifying landmarks (${done}/${total})...`);
+          },
+        });
+      } catch (error) {
+        log.warn('Landmark enrichment failed, using default names', error);
+      }
     }
 
     // Generate narrations for each checkpoint
@@ -175,6 +179,7 @@ class NarrationService {
     }
 
     pack.checkpoints = checkpoints;
+    log.info('Checkpoints assigned to pack', { packId, count: checkpoints.length });
 
     // Download offline map tiles (optional - don't fail if this doesn't work)
     if (onProgress) onProgress('Downloading offline maps...');
