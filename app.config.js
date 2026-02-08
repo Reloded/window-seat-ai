@@ -1,0 +1,67 @@
+import "dotenv/config";
+
+export default {
+  expo: {
+    name: "Window Seat",
+    slug: "window-seat",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/icon.png",
+    userInterfaceStyle: "light",
+    newArchEnabled: false,
+    splash: {
+      image: "./assets/splash-icon.png",
+      resizeMode: "contain",
+      backgroundColor: "#ffffff",
+    },
+    ios: {
+      bundleIdentifier: "com.stonku.windowseat",
+      buildNumber: "3",
+      supportsTablet: true,
+      infoPlist: {
+        NSLocationWhenInUseUsageDescription:
+          "Window Seat uses your location to show what you're flying over",
+        NSLocationAlwaysAndWhenInUseUsageDescription:
+          "Window Seat uses your location to narrate landmarks during your flight",
+        ITSAppUsesNonExemptEncryption: false,
+      },
+    },
+    android: {
+      package: "com.stonku.windowseat",
+      versionCode: 6,
+      adaptiveIcon: {
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#ffffff",
+      },
+      edgeToEdgeEnabled: true,
+      config: {
+        googleMaps: {
+          apiKey: process.env.GOOGLE_MAPS_API_KEY,
+        },
+      },
+      permissions: [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+      ],
+    },
+    web: {
+      favicon: "./assets/favicon.png",
+    },
+    plugins: ["expo-audio"],
+    extra: {
+      eas: {
+        projectId: "3820c932-9718-4e2f-a1b0-c5ee5561254c",
+      },
+    },
+    owner: "stonku",
+    runtimeVersion: {
+      policy: "appVersion",
+    },
+    updates: {
+      url: "https://u.expo.dev/3820c932-9718-4e2f-a1b0-c5ee5561254c",
+    },
+  },
+};
