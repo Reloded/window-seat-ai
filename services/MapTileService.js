@@ -369,13 +369,18 @@ class MapTileService {
     }
 
     // Create flight-specific directory
-    const flightCacheDir = new Directory(cacheDir, flightId);
-    if (!flightCacheDir.exists) {
-      flightCacheDir.create();
+    let flightCacheDir;
+    try {
+      flightCacheDir = new Directory(cacheDir, flightId);
+      if (!flightCacheDir.exists) {
+        flightCacheDir.create();
+      }
+    } catch (dirError) {
+      console.warn('MapTileService: Failed to create flight cache dir:', dirError?.message);
+      return { success: false, error: 'Cache dir creation failed', mapsDownloaded: 0 };
     }
 
     try {
-
       const center = getRouteCenter(route);
       const bounds = getRouteBounds(route, 0);
 
@@ -386,10 +391,9 @@ class MapTileService {
       }
       const results = [];
 
+      // Only download overview map to reduce memory pressure and crash risk
       const mapConfigs = [
         { name: 'overview', ...STATIC_MAP_SIZES.overview },
-        { name: 'regional', ...STATIC_MAP_SIZES.regional },
-        { name: 'detail', ...STATIC_MAP_SIZES.detail },
       ];
 
       let downloaded = 0;
@@ -404,21 +408,52 @@ class MapTileService {
         }
 
         try {
-          const file = new File(flightCacheDir, `${config.name}.png`);
           const url = this.buildStaticMapUrl(route, center, config);
+          console.log(`[MapTiles] Fetching ${config.name} map from:`, url);
 
-          // Set a timeout for the download
-          const downloadPromise = File.downloadFileAsync(url, file, { idempotent: true });
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Download timeout')), 30000)
-          );
+          // Use fetch instead of File.downloadFileAsync to avoid native crashes
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-          const downloadedFile = await Promise.race([downloadPromise, timeoutPromise]);
+          const response = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeoutId);
 
-          if (downloadedFile && downloadedFile.exists) {
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          // Check content length to avoid OOM on unexpectedly large responses
+          const contentLength = response.headers.get('content-length');
+          if (contentLength && parseInt(contentLength, 10) > 5 * 1024 * 1024) {
+            throw new Error(`Map image too large: ${contentLength} bytes`);
+          }
+
+          const blob = await response.blob();
+          console.log(`[MapTiles] ${config.name} fetched, size: ${blob.size} bytes`);
+
+          // Convert blob to base64 and write to file
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              // Strip data URL prefix to get raw base64
+              const base64Data = reader.result?.split(',')[1];
+              if (base64Data) {
+                resolve(base64Data);
+              } else {
+                reject(new Error('Failed to convert blob to base64'));
+              }
+            };
+            reader.onerror = () => reject(new Error('FileReader error'));
+            reader.readAsDataURL(blob);
+          });
+
+          const file = new File(flightCacheDir, `${config.name}.png`);
+          file.write(base64, { encoding: 'base64' });
+
+          if (file.exists) {
             results.push({
               name: config.name,
-              filePath: downloadedFile.uri,
+              filePath: file.uri,
               success: true,
             });
             downloaded++;
@@ -427,11 +462,11 @@ class MapTileService {
               name: config.name,
               filePath: null,
               success: false,
-              error: 'Download failed',
+              error: 'File write failed',
             });
           }
         } catch (error) {
-          console.warn(`Failed to download ${config.name} map:`, error?.message || error);
+          console.warn(`[MapTiles] Failed to download ${config.name} map:`, error?.message || error);
           results.push({
             name: config.name,
             filePath: null,
@@ -442,17 +477,21 @@ class MapTileService {
       }
 
       // Save metadata
-      const metadata = {
-        flightId,
-        downloadedAt: new Date().toISOString(),
-        route: route.slice(0, 2).concat(route.slice(-2)), // Store just endpoints
-        bounds,
-        center,
-        maps: results,
-      };
+      try {
+        const metadata = {
+          flightId,
+          downloadedAt: new Date().toISOString(),
+          route: route.slice(0, 2).concat(route.slice(-2)), // Store just endpoints
+          bounds,
+          center,
+          maps: results,
+        };
 
-      const metadataFile = new File(flightCacheDir, 'metadata.json');
-      metadataFile.write(JSON.stringify(metadata));
+        const metadataFile = new File(flightCacheDir, 'metadata.json');
+        metadataFile.write(JSON.stringify(metadata));
+      } catch (metaError) {
+        console.warn('[MapTiles] Failed to save metadata:', metaError?.message);
+      }
 
       if (onProgress) {
         onProgress({
@@ -469,8 +508,8 @@ class MapTileService {
         results,
       };
     } catch (error) {
-      console.error('Failed to download static maps:', error);
-      return { success: false, error: error.message };
+      console.error('[MapTiles] Failed to download static maps:', error);
+      return { success: false, error: error?.message || 'Unknown error', mapsDownloaded: 0 };
     }
   }
 
