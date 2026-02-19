@@ -28,7 +28,7 @@ export default {
     },
     android: {
       package: "com.stonku.windowseat",
-      versionCode: 6,
+      versionCode: 7,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff",
