@@ -4,7 +4,7 @@ export default {
   expo: {
     name: "Window Seat",
     slug: "window-seat",
-    version: "1.0.0",
+    version: "1.0.1",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -12,7 +12,7 @@ export default {
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
-      backgroundColor: "#ffffff",
+      backgroundColor: "#0A1628",
     },
     ios: {
       bundleIdentifier: "com.stonku.windowseat",
@@ -28,10 +28,10 @@ export default {
     },
     android: {
       package: "com.stonku.windowseat",
-      versionCode: 7,
+      versionCode: 8,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#ffffff",
+        backgroundColor: "#0A1628",
       },
       edgeToEdgeEnabled: true,
       config: {
