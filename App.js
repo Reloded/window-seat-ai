@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   StyleSheet,
   Text,
@@ -11,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, SunTrackerDisplay, BorderCrossingAlert, ErrorBanner, ErrorBoundary, NarrationSkeleton, CheckpointListSkeleton, FlightSearch, RoutePreview, FlightMap, SettingsModal, FlightHistoryModal } from './components';
+import { TelemetryDisplay, StatusIndicator, AudioPlayerControls, NextCheckpointDisplay, FlightProgressBar, CheckpointList, WindowSideAdvisor, SunTrackerDisplay, BorderCrossingAlert, ErrorBanner, ErrorBoundary, NarrationSkeleton, CheckpointListSkeleton, FlightSearch, RoutePreview, FlightMap, SettingsModal, FlightHistoryModal, OnboardingWalkthrough } from './components';
 import { useLocationTracking, useSettingsSync, useTheme } from './hooks';
 import { narrationService } from './services';
 import { isApiKeyConfigured } from './config';
@@ -575,12 +576,31 @@ function AppContent() {
 }
 
 export default function App() {
+  const [showOnboarding, setShowOnboarding] = useState(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem('onboarding_complete').then(value => {
+      setShowOnboarding(value !== 'true');
+    });
+  }, []);
+
+  const handleOnboardingComplete = useCallback(async () => {
+    await AsyncStorage.setItem('onboarding_complete', 'true');
+    setShowOnboarding(false);
+  }, []);
+
+  if (showOnboarding === null) return null; // Loading
+
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
         <SettingsProvider>
           <FlightHistoryProvider>
-            <AppContent />
+            {showOnboarding ? (
+              <OnboardingWalkthrough onComplete={handleOnboardingComplete} />
+            ) : (
+              <AppContent />
+            )}
           </FlightHistoryProvider>
         </SettingsProvider>
       </ErrorBoundary>

@@ -15,3 +15,4 @@ export { RoutePreview } from './RoutePreview';
 export { FlightMap } from './map';
 export { SettingsModal } from './settings';
 export { FlightHistoryModal } from './history';
+export { OnboardingWalkthrough } from './OnboardingWalkthrough';
