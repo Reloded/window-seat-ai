@@ -8,9 +8,10 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
  * @param {string} props.message - Error message to display
  * @param {string} [props.type] - Error type: 'error' (red), 'warning' (yellow), 'info' (blue)
  * @param {function} props.onDismiss - Callback when user dismisses the error
+ * @param {function} [props.onRetry] - Callback when user taps retry
  * @param {Object} [props.style] - Additional styles
  */
-export function ErrorBanner({ message, type = 'error', onDismiss, style }) {
+export function ErrorBanner({ message, type = 'error', onDismiss, onRetry, style }) {
   if (!message) return null;
 
   const typeStyles = {
@@ -57,6 +58,16 @@ export function ErrorBanner({ message, type = 'error', onDismiss, style }) {
         <Text style={styles.icon}>{colors.icon}</Text>
       </View>
       <Text style={styles.message} accessibilityElementsHidden>{message}</Text>
+      {onRetry && (
+        <TouchableOpacity
+          style={[styles.retryButton, { borderColor: colors.border }]}
+          onPress={onRetry}
+          accessibilityLabel="Retry"
+          accessibilityRole="button"
+        >
+          <Text style={[styles.retryText, { color: colors.border }]}>Retry</Text>
+        </TouchableOpacity>
+      )}
       {onDismiss && (
         <TouchableOpacity
           style={styles.dismissButton}
@@ -107,6 +118,17 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  retryButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 4,
+    borderWidth: 1,
+    marginLeft: 8,
+  },
+  retryText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 
