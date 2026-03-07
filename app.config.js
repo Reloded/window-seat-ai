@@ -57,9 +57,7 @@ export default {
       },
     },
     owner: "stonku",
-    runtimeVersion: {
-      policy: "appVersion",
-    },
+    runtimeVersion: "1.0.4",
     updates: {
       url: "https://u.expo.dev/3820c932-9718-4e2f-a1b0-c5ee5561254c",
     },
