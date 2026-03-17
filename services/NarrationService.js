@@ -42,13 +42,18 @@ class NarrationService {
 
   async ensureCacheDir() {
     if (Platform.OS === 'web') return null;
-    if (!narrationCacheDir) {
-      narrationCacheDir = new Directory(Paths.cache, 'narrations');
-      if (!narrationCacheDir.exists) {
-        narrationCacheDir.create();
+    try {
+      if (!narrationCacheDir) {
+        narrationCacheDir = new Directory(Paths.cache, 'narrations');
+        if (!narrationCacheDir.exists) {
+          narrationCacheDir.create();
+        }
       }
+      return narrationCacheDir;
+    } catch (error) {
+      log.error('Failed to create narration cache dir', error);
+      return null;
     }
-    return narrationCacheDir;
   }
 
   // Generate narration for current position (live mode)
@@ -276,9 +281,13 @@ class NarrationService {
 
     const cacheDir = await this.ensureCacheDir();
     if (!cacheDir) return;
-    
-    const file = new File(cacheDir, `${pack.id}.json`);
-    file.write(JSON.stringify(pack));
+
+    try {
+      const file = new File(cacheDir, `${pack.id}.json`);
+      file.write(JSON.stringify(pack));
+    } catch (error) {
+      log.warn('Failed to save flight pack to cache', { packId: pack?.id, error: error?.message });
+    }
   }
 
   async loadFlightPack(flightNumber) {
@@ -308,13 +317,17 @@ class NarrationService {
     if (!cacheDir) return null;
 
     // Check file cache
-    const file = new File(cacheDir, `${packId}.json`);
+    try {
+      const file = new File(cacheDir, `${packId}.json`);
 
-    if (file.exists) {
-      const content = await file.text();
-      const pack = JSON.parse(content);
-      this.flightPacks.set(packId, pack);
-      return pack;
+      if (file.exists) {
+        const content = await file.text();
+        const pack = JSON.parse(content);
+        this.flightPacks.set(packId, pack);
+        return pack;
+      }
+    } catch (error) {
+      log.warn('Failed to load cached flight pack', { packId, error: error?.message });
     }
 
     return null;
@@ -341,23 +354,37 @@ class NarrationService {
       }));
     }
 
-    const items = cacheDir.list();
-    const packs = [];
+    try {
+      const items = cacheDir.list();
+      const packs = [];
 
-    for (const item of items) {
-      if (item instanceof File && item.uri.endsWith('.json')) {
-        const content = await item.text();
-        const pack = JSON.parse(content);
-        packs.push({
-          id: pack.id,
-          flightNumber: pack.flightNumber,
-          downloadedAt: pack.downloadedAt,
-          checkpointCount: pack.checkpoints.length,
-        });
+      for (const item of items) {
+        try {
+          if (item instanceof File && item.uri.endsWith('.json')) {
+            const content = await item.text();
+            const pack = JSON.parse(content);
+            packs.push({
+              id: pack.id,
+              flightNumber: pack.flightNumber,
+              downloadedAt: pack.downloadedAt,
+              checkpointCount: pack.checkpoints?.length || 0,
+            });
+          }
+        } catch (itemError) {
+          log.warn('Failed to read cached flight pack file', itemError);
+        }
       }
-    }
 
-    return packs;
+      return packs;
+    } catch (error) {
+      log.warn('Failed to list cached flight packs', error);
+      return Array.from(this.flightPacks.values()).map(pack => ({
+        id: pack.id,
+        flightNumber: pack.flightNumber,
+        downloadedAt: pack.downloadedAt,
+        checkpointCount: pack.checkpoints?.length || 0,
+      }));
+    }
   }
 
   async deleteFlightPack(flightNumber) {
@@ -383,10 +410,14 @@ class NarrationService {
 
     const cacheDir = await this.ensureCacheDir();
     if (!cacheDir) return;
-    
-    const file = new File(cacheDir, `${packId}.json`);
-    if (file.exists) {
-      file.delete();
+
+    try {
+      const file = new File(cacheDir, `${packId}.json`);
+      if (file.exists) {
+        file.delete();
+      }
+    } catch (error) {
+      log.warn('Failed to delete cached flight pack', { packId, error: error?.message });
     }
   }
 
@@ -412,10 +443,15 @@ class NarrationService {
       return;
     }
 
-    if (narrationCacheDir && narrationCacheDir.exists) {
-      narrationCacheDir.delete();
+    try {
+      if (narrationCacheDir && narrationCacheDir.exists) {
+        narrationCacheDir.delete();
+        narrationCacheDir = null;
+        await this.ensureCacheDir();
+      }
+    } catch (error) {
+      log.warn('Failed to clear narration cache', error);
       narrationCacheDir = null;
-      await this.ensureCacheDir();
     }
   }
 
