@@ -4,7 +4,7 @@
 Mobile app that narrates what you're flying over during flights. Pre-caches AI-generated descriptions so it works 100% offline at 35,000 feet.
 
 ## Current Status
-- **Phase:** Feature Complete (MVP), v1.0.6 in store submission
+- **Phase:** Feature Complete (MVP), v1.0.7 in store submission
 - **Platform:** Expo (React Native)
 - **Target:** iOS + Android
 
