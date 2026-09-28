@@ -42,3 +42,9 @@ yarn-error.*
 /ios
 /android
 .claude/
+
+# Build artifacts and store credentials
+*.aab
+*.apk
+*.ipa
+google-service-account.json
