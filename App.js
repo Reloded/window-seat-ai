@@ -25,6 +25,7 @@ function AppContent() {
   const [flightNumber, setFlightNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [flightPackReady, setFlightPackReady] = useState(false);
+  const [flightPackId, setFlightPackId] = useState(null);
   const [downloadProgress, setDownloadProgress] = useState(null);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [checkpoints, setCheckpoints] = useState([]);
@@ -173,6 +174,7 @@ function AppContent() {
       setFlightOrigin(pack?.origin || null);
       setFlightDestination(pack?.destination || null);
       resetTriggeredCheckpoints(); // Clear any previously triggered checkpoints
+      setFlightPackId(pack?.id || flightId.replace(/\s/g, ''));
       setFlightPackReady(true);
       setDownloadProgress(null);
 
@@ -401,6 +403,7 @@ function AppContent() {
               checkpoints={checkpoints}
               location={location}
               triggeredCheckpoints={triggeredCheckpoints}
+              flightId={flightPackId}
               isExpanded={mapExpanded}
               onToggleExpand={() => setMapExpanded(!mapExpanded)}
             />

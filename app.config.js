@@ -52,6 +52,7 @@ export default {
     },
     plugins: ["expo-audio"],
     extra: {
+      hasGoogleMapsKey: Boolean(process.env.GOOGLE_MAPS_API_KEY),
       eas: {
         projectId: "3820c932-9718-4e2f-a1b0-c5ee5561254c",
       },
