@@ -4,7 +4,7 @@
 Mobile app that narrates what you're flying over during flights. Pre-caches AI-generated descriptions so it works 100% offline at 35,000 feet.
 
 ## Current Status
-- **Phase:** Feature Complete (MVP)
+- **Phase:** Feature Complete (MVP), v1.0.7 in store submission
 - **Platform:** Expo (React Native)
 - **Target:** iOS + Android
 
@@ -18,6 +18,7 @@ Mobile app that narrates what you're flying over during flights. Pre-caches AI-g
 | Offline Storage | expo-file-system |
 | GPS Tracking | expo-location |
 | Audio Playback | expo-audio |
+| Fallback TTS | expo-speech (FreeTTSService) |
 | Map (Web) | react-leaflet / Leaflet |
 | Map (Native) | react-native-maps |
 | Offline Maps | IndexedDB (web) / Static images (native) |
@@ -53,6 +54,12 @@ The app works without any API keys using demo data. Add keys for full functional
     WindowSideAdvisor.js # Recommends left/right window seat based on landmarks
     SunTrackerDisplay.js # Shows sun position, golden hour, sunrise/sunset times
     BorderCrossingAlert.js # Shows alerts when crossing country/state borders
+    ErrorBoundary.js # Catches render crashes and shows a fallback
+    ErrorBanner.js  # Dismissible error banner with retry button
+    FlightSearch.js # Flight number / airport pair search modal
+    RoutePreview.js # Route summary shown before download
+    LoadingSkeleton.js # Loading placeholders
+    OnboardingWalkthrough.js # First-launch walkthrough
     /map              # Map view components (platform-specific)
       index.js        # Map component exports
       FlightMap.js    # Native map with react-native-maps (offline fallback)
@@ -72,12 +79,14 @@ The app works without any API keys using demo data. Add keys for full functional
       SettingsPicker.js   # Dropdown picker
       SettingsInput.js    # Text input for API keys
       SettingsButton.js   # Action button
+      DebugLogsModal.js   # In-app debug log viewer
       /sections           # Settings section components
         VoiceAudioSection.js
         NarrationSection.js
         GPSSection.js
         StorageSection.js
         APISection.js
+        DisplaySection.js
     /history          # Flight history components
       index.js        # History component exports
       FlightHistoryModal.js   # Full-screen history modal
@@ -87,6 +96,7 @@ The app works without any API keys using demo data. Add keys for full functional
   /config           # Configuration
     index.js        # Config exports
     api.js          # API keys and settings
+    theme.js        # Colors and theme tokens
   /contexts         # React contexts
     index.js        # Context exports
     SettingsContext.js      # Global settings state with AsyncStorage persistence
@@ -95,6 +105,7 @@ The app works without any API keys using demo data. Add keys for full functional
     index.js        # Hook exports
     useLocationTracking.js  # GPS tracking hook with geofencing
     useSettingsSync.js      # Syncs settings to services
+    useTheme.js             # Theme access hook
   /services         # API integrations
     index.js        # Service exports
     LocationService.js  # GPS tracking service (singleton)
@@ -108,6 +119,9 @@ The app works without any API keys using demo data. Add keys for full functional
     SunPositionService.js # Sunrise/sunset calculations and sun position
     BorderCrossingService.js # Detects country/state border crossings
     MapTileService.js   # Offline map tile caching (IndexedDB/static images)
+    FreeTTSService.js   # On-device text-to-speech fallback (expo-speech)
+    /base             # Shared service infrastructure
+      EventEmitter.js # Minimal event emitter used by services
   /utils            # Helper functions
     index.js        # Utility exports
     geofence.ts     # Distance calc, geofence checking (TypeScript)
@@ -115,14 +129,22 @@ The app works without any API keys using demo data. Add keys for full functional
     conversions.js  # Unit conversions (m->ft, mps->kts, etc.)
     routeUtils.js   # Route-to-checkpoint conversion, ETA calc
     formatBytes.js  # Format bytes for display
+    logger.js       # Logging helper (feeds DebugLogsModal)
+    retry.js        # Retry with backoff for network calls
+  /data             # Bundled static data
+    landmarkNarrations.js # Pre-written landmark narrations for demo mode
+  /__tests__        # Jest unit tests (geofence.test.ts)
+  /docs             # GitHub Pages: privacy policy and terms of service
   /assets           # Static assets
   App.js            # Main application
+  app.config.js     # Expo config (bundle IDs, permissions, EAS/updates)
+  eas.json          # EAS Build/Submit profiles
   CLAUDE.md         # This file
 ```
 
 ## Completed Features
 - [x] Initialize Expo project
-- [x] Install dependencies (expo-location, expo-av, expo-file-system)
+- [x] Install dependencies (expo-location, expo-audio, expo-file-system)
 - [x] Build GPS tracking component (LocationService, useLocationTracking hook, geofence utils)
 - [x] Create mock narration UI (TelemetryDisplay, StatusIndicator components)
 - [x] Add Claude API integration (ClaudeService, NarrationService with offline caching)
@@ -152,7 +174,7 @@ Preparing to ship Window Seat to iOS App Store and Google Play Store.
 - **Apple Developer**: Enrollment processing ($99 paid), awaiting approval (1-2 days)
 
 #### EAS Build Configuration Complete
-- `app.json` updated with bundle IDs (`com.windowseat.app`), permissions, metadata
+- `app.config.js` holds bundle IDs (`com.stonku.windowseat`), permissions, metadata
 - `eas.json` created with development/preview/production profiles
 - `package.json` has build scripts: `npm run build:ios`, `npm run build:android`, etc.
 - EAS project linked: `@stonku/window-seat` (ID: 3820c932-9718-4e2f-a1b0-c5ee5561254c)
@@ -176,7 +198,7 @@ Preparing to ship Window Seat to iOS App Store and Google Play Store.
 
 ### Known Issues / TODO
 - **Google Maps on Android**: Requires API key for native maps. Currently shows placeholder.
-  - To fix: Add `android.config.googleMaps.apiKey` to app.json
+  - To fix: set `GOOGLE_MAPS_API_KEY` in `.env` (read by `app.config.js` into `android.config.googleMaps.apiKey`)
   - Get key from: https://console.cloud.google.com/ → Enable "Maps SDK for Android"
 - **iOS build**: Waiting for Apple Developer enrollment approval
 - **Store listings**: Need to create app listings in App Store Connect and Play Console

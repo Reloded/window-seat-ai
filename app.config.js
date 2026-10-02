@@ -4,7 +4,7 @@ export default {
   expo: {
     name: "Window Seat",
     slug: "window-seat",
-    version: "1.0.6",
+    version: "1.0.7",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -16,7 +16,7 @@ export default {
     },
     ios: {
       bundleIdentifier: "com.stonku.windowseat",
-      buildNumber: "3",
+      buildNumber: "4",
       supportsTablet: true,
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
@@ -28,7 +28,7 @@ export default {
     },
     android: {
       package: "com.stonku.windowseat",
-      versionCode: 15,
+      versionCode: 16,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#0A1628",
@@ -52,12 +52,13 @@ export default {
     },
     plugins: ["expo-audio"],
     extra: {
+      hasGoogleMapsKey: Boolean(process.env.GOOGLE_MAPS_API_KEY),
       eas: {
         projectId: "3820c932-9718-4e2f-a1b0-c5ee5561254c",
       },
     },
     owner: "stonku",
-    runtimeVersion: "1.0.6",
+    runtimeVersion: "1.0.7",
     updates: {
       url: "https://u.expo.dev/3820c932-9718-4e2f-a1b0-c5ee5561254c",
     },

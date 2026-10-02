@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useEffect, useState, Component } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import MapView, { Polyline, Circle, Marker } from 'react-native-maps';
 import NetInfo from '@react-native-community/netinfo';
+import Constants from 'expo-constants';
 import { COLORS, SIZES } from './mapStyles';
 import { StaticFlightMap } from './StaticFlightMap';
 import { mapTileService } from '../../services/MapTileService';
@@ -113,8 +114,13 @@ export function FlightMap({
     };
   }, [flightId]);
 
-  // Use static map when offline and offline maps are available
-  const useStaticMap = isOffline && hasOfflineMaps && offlineMapsEnabled;
+  // Without a key in the Android manifest, MapView throws a native exception on mount
+  // that React error boundaries cannot catch, so it must never be rendered.
+  const googleMapsKeyMissing =
+    Platform.OS === 'android' && !Constants.expoConfig?.extra?.hasGoogleMapsKey;
+
+  // Use static map when offline (or Google Maps is unavailable) and offline maps are available
+  const useStaticMap = (isOffline || googleMapsKeyMissing) && hasOfflineMaps && offlineMapsEnabled;
 
   // Convert route to react-native-maps format
   const routeCoordinates = useMemo(() => {
@@ -178,24 +184,15 @@ export function FlightMap({
     }
   }, [route, useStaticMap]);
 
-  // On Android, Google Maps requires an API key - but let's try rendering anyway
-  // The map component will handle errors gracefully via the error boundary
-  const googleMapsKeyMissing = false; // Let it try - error boundary will catch failures
-
-  // Show fallback if map errored or Google Maps key missing on Android
-  if (mapError || googleMapsKeyMissing) {
+  // Show fallback if map errored, or Google Maps is unusable and there is no static map
+  if (mapError || (googleMapsKeyMissing && !useStaticMap)) {
     return (
       <View style={[styles.container, styles.collapsed, style]}>
         <View style={styles.fallbackContainer}>
-          <Text style={styles.fallbackText}>
-            {googleMapsKeyMissing ? 'Map requires setup' : 'Map unavailable'}
-          </Text>
+          <Text style={styles.fallbackText}>Map unavailable</Text>
           <Text style={styles.fallbackSubtext}>
-            {route.length > 0 ? `${route.length} route points loaded` : 'Route will show on web'}
+            {route.length > 0 ? `${route.length} route points loaded` : 'No route loaded'}
           </Text>
-          {googleMapsKeyMissing && (
-            <Text style={styles.fallbackHint}>Add Google Maps API key for native maps</Text>
-          )}
         </View>
       </View>
     );
