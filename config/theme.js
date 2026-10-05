@@ -16,11 +16,12 @@ export const themes = {
       // Text
       text: '#ffffff',
       textSecondary: 'rgba(255, 255, 255, 0.6)',
-      textMuted: '#666666',
+      textMuted: '#8a95a5',
 
       // Accent colors
       primary: '#00d4ff',
       primaryDark: '#0a1628',
+      onPrimary: '#0a1628',
       success: '#4caf50',
       warning: '#ffc107',
       error: '#ff6b6b',
@@ -47,11 +48,12 @@ export const themes = {
       // Text
       text: '#1a1a2e',
       textSecondary: 'rgba(26, 26, 46, 0.7)',
-      textMuted: '#888888',
+      textMuted: '#6b7280',
 
       // Accent colors
-      primary: '#0099cc',
-      primaryDark: '#006688',
+      primary: '#0a7ea4',
+      primaryDark: '#075f7d',
+      onPrimary: '#ffffff',
       success: '#4caf50',
       warning: '#ff9800',
       error: '#e53935',

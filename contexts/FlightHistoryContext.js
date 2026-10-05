@@ -37,10 +37,12 @@ export function FlightHistoryProvider({ children }) {
 
   const addFlightToHistory = useCallback((flightData) => {
     setHistory(prev => {
-      // Check if this flight already exists (by flight number)
-      const existingIndex = prev.findIndex(
-        entry => entry.flightNumber === flightData.flightNumber
-      );
+      // A route counts as the same flight when its airports match.
+      const keyOf = (f) =>
+        f.origin?.code && f.destination?.code
+          ? `${f.origin.code}-${f.destination.code}`
+          : f.flightNumber;
+      const existingIndex = prev.findIndex(entry => keyOf(entry) === keyOf(flightData));
 
       const newEntry = {
         id: `${flightData.flightNumber}_${Date.now()}`,
@@ -67,6 +69,7 @@ export function FlightHistoryProvider({ children }) {
         // Add new entry at top
         newHistory = [newEntry, ...prev];
       }
+      newHistory = newHistory.slice(0, 12);
 
       saveHistory(newHistory);
       return newHistory;

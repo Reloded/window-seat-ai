@@ -42,3 +42,7 @@ yarn-error.*
 /ios
 /android
 .claude/
+
+# release bundles
+*.aab
+*.keystore

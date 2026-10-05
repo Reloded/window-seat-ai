@@ -1,13 +1,6 @@
 export { EventEmitter } from './base';
 export { locationService, LocationService } from './LocationService';
-export { claudeService, ClaudeService } from './ClaudeService';
-export { narrationService, NarrationService } from './NarrationService';
-export { elevenLabsService, ElevenLabsService } from './ElevenLabsService';
-// freeTTSService temporarily disabled for debugging
-export { audioService, AudioService } from './AudioService';
-export { flightDataService, FlightDataService } from './FlightDataService';
-export { shareService, ShareService } from './ShareService';
-export { landmarkService, LandmarkService } from './LandmarkService';
+export { freeTTSService, FreeTTSService } from './FreeTTSService';
 export { sunPositionService, SunPositionService } from './SunPositionService';
-export { borderCrossingService, BorderCrossingService } from './BorderCrossingService';
-export { mapTileService, MapTileService } from './MapTileService';
+export { buildFlightPack, packLabel } from './FlightPlanner';
+export { lookupFlight, FlightLookupError, looksLikeFlightNumber } from './FlightLookupService';

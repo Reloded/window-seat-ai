@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
   TouchableOpacity,
   FlatList,
   Animated,
@@ -11,41 +11,41 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../hooks';
 
-const { width, height } = Dimensions.get('window');
 
 const slides = [
   {
     id: '1',
-    icon: '✈️',
-    title: 'Your AI Flight Companion',
-    subtitle: 'Window Seat AI narrates landmarks, cities, and geography as you fly over them.',
-    detail: 'Turn every flight into a guided tour from your window seat.',
+    icon: '🪟',
+    title: 'Your window seat, narrated',
+    subtitle: 'Window Seat tells you what you are flying over: mountains, cities, coastlines, glaciers and more.',
+    detail: 'Turn any flight into a guided tour.',
   },
   {
     id: '2',
-    icon: '🔍',
-    title: 'Set Up Your Flight',
-    subtitle: 'Enter your flight number or search by route to download your flight pack before takeoff.',
-    detail: 'AI generates narrations for every landmark along your route.',
+    icon: '🛫',
+    title: 'Pick your route',
+    subtitle: 'Choose your departure and arrival airports, or look up a flight number. Your plan is ready in a second.',
+    detail: 'No account and no sign-up.',
   },
   {
     id: '3',
-    icon: '🎧',
-    title: 'Listen as You Fly',
-    subtitle: 'Get automatic narrations when you pass landmarks, mountains, rivers, and cities.',
-    detail: 'Choose your voice, language, and narration style in settings.',
+    icon: '👀',
+    title: 'Left window or right?',
+    subtitle: 'Every sight is marked LEFT or RIGHT, and the app suggests which side of the plane to sit on.',
+    detail: 'A friendly voice reads each story as you approach.',
   },
   {
     id: '4',
     icon: '📡',
-    title: 'Works Offline',
-    subtitle: 'Download everything before takeoff. No Wi-Fi needed at 35,000 feet.',
-    detail: 'Maps, narrations, and audio all cached on your device.',
+    title: 'Works in airplane mode',
+    subtitle: "Everything is built in. Your phone's GPS works offline, and if it cannot see the sky, a flight clock keeps the tour going.",
+    detail: 'Best with headphones and the phone at the window.',
   },
 ];
 
 export function OnboardingWalkthrough({ onComplete }) {
   const { colors } = useTheme();
+  const { width } = useWindowDimensions();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef(null);
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -128,6 +128,7 @@ export function OnboardingWalkthrough({ onComplete }) {
         data={slides}
         renderItem={renderSlide}
         keyExtractor={(item) => item.id}
+        getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}

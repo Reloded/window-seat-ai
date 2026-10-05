@@ -4,5 +4,12 @@ dist/
 .claude/
 .planning/
 __tests__/
+docs/
 *.md
 .env*
+*.aab
+store-*.png
+generate-icons.js
+# Generated native projects are rebuilt by EAS from app.config.js
+/android
+/ios

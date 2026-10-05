@@ -111,7 +111,8 @@ class FreeTTSService {
         language: mergedOptions.language,
         pitch: mergedOptions.pitch,
         rate: mergedOptions.rate,
-        voice: mergedOptions.voice,
+        ...(mergedOptions.voice ? { voice: mergedOptions.voice } : {}),
+        ...(typeof mergedOptions.volume === 'number' ? { volume: mergedOptions.volume } : {}),
         onStart: () => {
           this.isSpeaking = true;
           this.notifyListeners('started');
