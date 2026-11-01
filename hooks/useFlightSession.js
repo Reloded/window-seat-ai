@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { locationService } from '../services/LocationService';
 import { freeTTSService } from '../services/FreeTTSService';
+import { maybeAskForReview } from '../services/ReviewPrompt';
 import {
   Narrator,
   positionAlongRoute,
@@ -53,6 +54,7 @@ export function useFlightSession(pack, options = {}) {
   const speakingRef = useRef(false);
   const awakeRef = useRef(false);
   const useClockRef = useRef(false);
+  const sightsRef = useRef(0);
 
   packRef.current = pack;
   voiceRef.current = voiceEnabled;
@@ -110,6 +112,7 @@ export function useFlightSession(pack, options = {}) {
   // ── Announcements ──────────────────────────────────────────────
   const announce = useCallback((a) => {
     setCurrent(a);
+    if (a.kind === 'landmark') sightsRef.current += 1;
     setHeard(prev => [...prev, { ...a, at: Date.now() }]);
     setTriggeredIds(prev => {
       const next = new Set(prev);
@@ -139,12 +142,23 @@ export function useFlightSession(pack, options = {}) {
     }
   }, []);
 
+  // After a flight that delivered something, maybe ask for a store rating
+  // (rate-limited inside ReviewPrompt; a short delay lets the last words finish).
+  const reportFlightEnd = useCallback(() => {
+    const minutes = startedAtRef.current ? (Date.now() - startedAtRef.current) / 60000 : 0;
+    const sightsHeard = sightsRef.current;
+    setTimeout(() => {
+      maybeAskForReview({ minutes, sightsHeard }).catch(() => {});
+    }, 4000);
+  }, []);
+
   const finish = useCallback(() => {
     if (statusRef.current !== 'running') return;
     statusRef.current = 'finished';
     setStatus('finished');
     stopEverything();
-  }, [stopEverything]);
+    reportFlightEnd();
+  }, [stopEverything, reportFlightEnd]);
 
   // ── Position handling (shared by GPS and the flight clock) ─────
   const feed = useCallback((pos, heading, speedKmh, altitude, source, alongOverride) => {
@@ -243,6 +257,7 @@ export function useFlightSession(pack, options = {}) {
       { excludeCitiesNear: [p.origin, p.destination] }
     );
     startedAtRef.current = Date.now();
+    sightsRef.current = 0;
     offsetMinRef.current = 0;
     lastFixAtRef.current = 0;
     progressRef.current = 0;
@@ -299,12 +314,14 @@ export function useFlightSession(pack, options = {}) {
   }, [announce, keepAwake, onGpsFix, stopEverything, stopSpeech, tick]);
 
   const stop = useCallback(() => {
+    const wasRunning = statusRef.current === 'running';
     statusRef.current = 'idle';
     setStatus('idle');
     setMode('waiting');
     stopEverything();
     stopSpeech();
-  }, [stopEverything, stopSpeech]);
+    if (wasRunning) reportFlightEnd();
+  }, [stopEverything, stopSpeech, reportFlightEnd]);
 
   /** Nudge the flight clock (e.g. +5 / -5 minutes). */
   const adjustClock = useCallback((minutes) => {

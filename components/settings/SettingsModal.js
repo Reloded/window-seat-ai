@@ -18,6 +18,7 @@ import { useSettings } from '../../contexts';
 import { useFlightHistory } from '../../contexts';
 import { useTheme } from '../../hooks/useTheme';
 import { freeTTSService } from '../../services/FreeTTSService';
+import { openStorePage } from '../../services/ReviewPrompt';
 
 const PRIVACY_URL = 'https://reloded.github.io/window-seat-ai/privacy-policy.html';
 const TERMS_URL = 'https://reloded.github.io/window-seat-ai/terms-of-service.html';
@@ -172,6 +173,14 @@ export function SettingsModal({ visible, onClose }) {
 
           <Text style={[styles.section, { color: colors.textSecondary }]}>ABOUT</Text>
           <View style={[styles.card, { backgroundColor: cardBg, borderColor: colors.border }]}>
+            {Platform.OS !== 'web' && (
+              <>
+                <TouchableOpacity style={styles.link} onPress={() => openStorePage().catch(() => {})} accessibilityRole="link" accessibilityLabel="Rate Window Seat">
+                  <Text style={[styles.linkText, { color: colors.primary }]}>⭐ Rate Window Seat</Text>
+                </TouchableOpacity>
+                <View style={[styles.hr, { backgroundColor: colors.border }]} />
+              </>
+            )}
             <TouchableOpacity style={styles.link} onPress={() => Linking.openURL(PRIVACY_URL)} accessibilityRole="link" accessibilityLabel="Privacy policy">
               <Text style={[styles.linkText, { color: colors.primary }]}>Privacy policy</Text>
             </TouchableOpacity>
@@ -181,7 +190,7 @@ export function SettingsModal({ visible, onClose }) {
             </TouchableOpacity>
             <View style={[styles.hr, { backgroundColor: colors.border }]} />
             <Text style={[styles.body, { color: colors.textSecondary }]}>
-              Window Seat {version}. Sights are chosen from a built-in atlas of about 480 places. Optional flight-number lookup uses the free adsbdb.com route database.
+              Window Seat {version}. Sights are chosen from a built-in atlas of about 630 places. Optional flight-number lookup uses the free adsbdb.com route database.
             </Text>
           </View>
         </ScrollView>

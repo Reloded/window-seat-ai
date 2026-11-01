@@ -12,7 +12,7 @@ Everything runs on the phone. No API keys, no backend, no account. Works in airp
 4. Screen stays awake during a flight (`expo-keep-awake`).
 
 ## Content
-- `data/landmarks/*.ts`: ~480 sights (`L(id, name, type, lat, lon, radiusKm, importance, text)`), hand-written English narrations. Text must start with the feature's name; the engine prepends "Look out the left-hand window." etc.
+- `data/landmarks/*.ts`: ~630 sights (`L(id, name, type, lat, lon, radiusKm, importance, text)`), hand-written English narrations. Text must start with the feature's name; the engine prepends "Look out the left-hand window." etc.
 - `data/landmarks/index.ts`: also `FLIGHT_FACTS` (fillers for long empty stretches).
 - To add a sight: append an `L(...)` to a file in `data/landmarks/` (unique id). `__tests__/narrator.test.ts` checks ids, coordinates and text length.
 - Line crossings (equator, tropics, polar circles, prime meridian, date line) are detected geometrically in `utils/narrator.ts`.
@@ -61,4 +61,4 @@ cd android && ./gradlew bundleRelease -PreactNativeArchitectures=armeabi-v7a,arm
 ## Known limitations
 - Narration is English only.
 - GPS in airplane mode depends on the seat (window seat is best); the flight clock is the fallback and assumes a normal schedule (use the -5 / +5 / "Just took off" buttons to sync).
-- Sights are matched against an atlas of ~480 places, so quiet stretches get in-flight facts instead.
+- Sights are matched against an atlas of ~630 places, so quiet stretches get in-flight facts instead.

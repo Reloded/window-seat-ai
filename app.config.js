@@ -2,7 +2,7 @@ export default {
   expo: {
     name: "Window Seat",
     slug: "window-seat",
-    version: "1.1.0",
+    version: "1.2.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "automatic",
@@ -24,7 +24,7 @@ export default {
     },
     android: {
       package: "com.stonku.windowseat",
-      versionCode: 16,
+      versionCode: 17,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#102847",
@@ -60,7 +60,7 @@ export default {
       },
     },
     owner: "stonku",
-    runtimeVersion: "1.1.0",
+    runtimeVersion: "1.2.0",
     updates: {
       url: "https://u.expo.dev/3820c932-9718-4e2f-a1b0-c5ee5561254c",
     },

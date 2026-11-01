@@ -22,7 +22,7 @@ Window Seat turns your flight into a guided tour. Pick where you are flying from
 
 **Made for the plane**
 - Works fully offline and in airplane mode. No account, no sign-up, no API keys.
-- Built-in atlas of about 480 places around the world, from the Alps and the Himalayas to the Grand Canyon, Uluru and the Great Barrier Reef.
+- Built-in atlas of about 630 places around the world, from the Alps and the Himalayas to the Grand Canyon, Uluru and the Great Barrier Reef.
 - Hears the sights out loud with your phone's built-in voice (adjustable speed).
 - Tells you when you cross the Equator, the Tropics, the Arctic Circle, the Prime Meridian and the International Date Line.
 - Sun tracker: which window has the sun, and when the golden hour arrives.
@@ -63,10 +63,15 @@ https://reloded.github.io/window-seat-ai/privacy-policy.html
 - Search history / app activity: the optional flight-number lookup sends the typed flight number to adsbdb.com; nothing else leaves the device. If you want to be strict, declare "App activity - in-app search history, collected, not shared, optional, for app functionality".
 - No account, no ads, no analytics, no personal info.
 
+## Release notes (what's new in 1.2.0)
+- About 140 new sights: ocean crossings (North Atlantic, North Pacific, Indian Ocean), the Sahara and Sahel, East and southern Africa, Central Asia, the Caribbean and South America. Long-haul flights now have far fewer quiet stretches.
+- After a long flight, Window Seat may ask you to rate it (at most once every few months).
+- "Rate Window Seat" in Settings.
+
 ## Release notes (what's new in 1.1.0)
 Completely reworked so it works for everyone:
 - No API keys or setup needed. Just pick your airports and go.
-- Built-in atlas of about 480 sights, planned along your route, marked left or right window.
+- Built-in atlas of about 630 sights, planned along your route, marked left or right window.
 - Voice narration with your phone's built-in voice, fully offline.
 - GPS-based, with a flight clock fallback when there is no GPS signal.
 - Offline flight radar, sun tracker and line-crossing announcements (Equator, Date Line...).

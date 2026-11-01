@@ -5,10 +5,11 @@ import { AFRICA } from './africa';
 import { AMERICAS } from './americas';
 import { OCEANIA } from './oceania';
 import { MORE } from './more';
+import { GAPS } from './gaps';
 
 export type { Landmark, FeatureType } from './types';
 
-export const LANDMARKS: Landmark[] = [...EUROPE, ...ASIA, ...AFRICA, ...AMERICAS, ...OCEANIA, ...MORE];
+export const LANDMARKS: Landmark[] = [...EUROPE, ...ASIA, ...AFRICA, ...AMERICAS, ...OCEANIA, ...MORE, ...GAPS];
 
 // In-flight facts used to fill long stretches with no landmark in range
 // (typically ocean crossings). Each is spoken as-is.

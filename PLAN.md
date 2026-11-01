@@ -1,7 +1,7 @@
 # Window Seat - Plan
 
 ## Done in v1.1.0 (2026-09-28): usable without any setup
-- [x] Offline atlas: ~480 sights with hand-written narrations, ~436 airports
+- [x] Offline atlas: ~630 sights with hand-written narrations, ~436 airports
 - [x] Route by airport pair (offline) or flight number (free lookup)
 - [x] Narrator engine: left/right/below, timing, equator/tropics/date-line crossings, in-flight facts
 - [x] GPS mode + flight-clock fallback, keep-awake, device voice (expo-speech)
